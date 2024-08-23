@@ -1,0 +1,23 @@
+{
+  "name": "ig_playwright",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "npx playwright test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "fs": "^0.0.1-security",
+    "playwright": "^1.46.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.46.1",
+    "@types/node": "^22.5.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  },
+  "type": "module"
+}
