@@ -2,26 +2,37 @@ import fs from "fs";
 import path, { dirname } from "path";
 import { BrowserContext, chromium, Cookie, Page } from "playwright";
 import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const cookiesPath = path.resolve(__dirname, "../cookies.json");
 
+const username = process.env.IG_LOGIN;
+const password = process.env.IG_PASSWORD;
+if (!username || !password)
+  throw new Error("IG_USERNAME or IG_PASSWORD not set");
+
 export const login = async (): Promise<Cookie[]> => {
   const browser = await chromium.launch({ headless: false });
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  const cookiesExist = fs.existsSync(cookiesPath);
-  let cookies: Cookie[];
-  if (!cookiesExist) {
+  let cookies: Cookie[] = JSON.parse(fs.readFileSync(cookiesPath, "utf8"));
+  if (!cookies || cookies.length < 4) {
     cookies = await logInManually({ page, context });
 
     fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
-  } else {
-    cookies = JSON.parse(fs.readFileSync(cookiesPath, "utf8"));
   }
+  //even if we don't need to log in, we still get some cookies
+  if (cookies.length < 4) {
+    throw new Error("Probably not logged in");
+  }
+
+  // Close the browser instance after task completion
+  await browser.close();
 
   return cookies;
 };
@@ -36,10 +47,18 @@ const logInManually = async ({
   await page.goto("https://www.instagram.com");
 
   console.log("Please log in manually...");
+  await page.click('text="Allow all cookies"');
 
-  // Wait for the user to log in manually
-  await page.waitForSelector("nav"); // Assuming the navigation bar is present when logged in
+  //fill in the username and password
+  await page.fill('input[name="username"]', username);
+  await page.fill('input[name="password"]', password);
 
-  // Save cookies after successful login
-  return await context.cookies();
+  await page.click('button[type="submit"]');
+
+  //wait for nav to appear
+  await page.waitForSelector('nav');
+
+  const cookies = await context.cookies();
+
+  return cookies;
 };
