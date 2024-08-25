@@ -16,15 +16,16 @@ if (!username || !password)
   throw new Error("IG_USERNAME or IG_PASSWORD not set");
 
 export const login = async (): Promise<Cookie[]> => {
-  const browser = await chromium.launch({ headless: false });
-  const context = await browser.newContext();
-  const page = await context.newPage();
-
   let cookies: Cookie[] = JSON.parse(fs.readFileSync(cookiesPath, "utf8"));
   if (!cookies || cookies.length < 4) {
+    const browser = await chromium.launch({ headless: false });
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
     cookies = await logInManually({ page, context });
 
     fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
+    await browser.close();
   }
   //even if we don't need to log in, we still get some cookies
   if (cookies.length < 4) {
@@ -32,7 +33,6 @@ export const login = async (): Promise<Cookie[]> => {
   }
 
   // Close the browser instance after task completion
-  await browser.close();
 
   return cookies;
 };
@@ -56,7 +56,7 @@ const logInManually = async ({
   await page.click('button[type="submit"]');
 
   //wait for nav to appear
-  await page.waitForSelector('nav');
+  await page.waitForSelector("nav");
 
   const cookies = await context.cookies();
 

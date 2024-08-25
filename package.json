@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "npx playwright test"
+    "start": "docker-compose up -d && npx playwright test"
   },
   "keywords": [],
   "author": "",
@@ -12,6 +12,8 @@
   "dependencies": {
     "dotenv": "^16.4.5",
     "fs": "^0.0.1-security",
+    "mongodb": "^6.8.0",
+    "mongoose": "^8.5.4",
     "playwright": "^1.46.1"
   },
   "devDependencies": {
