@@ -18,7 +18,7 @@ if (!username || !password)
 export const login = async (): Promise<Cookie[]> => {
   let cookies: Cookie[] = JSON.parse(fs.readFileSync(cookiesPath, "utf8"));
   if (!cookies || cookies.length < 4) {
-    const browser = await chromium.launch({ headless: false });
+    const browser = await chromium.launch({ headless: false,  });
     const context = await browser.newContext();
     const page = await context.newPage();
 
@@ -31,9 +31,7 @@ export const login = async (): Promise<Cookie[]> => {
   if (cookies.length < 4) {
     throw new Error("Probably not logged in");
   }
-
-  // Close the browser instance after task completion
-
+  
   return cookies;
 };
 

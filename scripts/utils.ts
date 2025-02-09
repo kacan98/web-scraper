@@ -33,3 +33,9 @@ export function isValidUrl(url: string): boolean {
   );
   return !!urlPattern.test(url);
 }
+
+//waits for with a 20% margin of error
+export const sleepApprox = async (page: Page, ms: number) => {
+  const randomFactor = Math.random() * 0.4 + 0.8;
+  await page.waitForTimeout(ms * randomFactor);
+}
