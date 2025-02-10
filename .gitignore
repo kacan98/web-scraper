@@ -6,3 +6,6 @@ node_modules/
 cookies.json
 .env
 /results/
+
+# Ignore the postgres data directory in the root - that's the volume we're mounting
+/pgdata/

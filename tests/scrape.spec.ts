@@ -140,7 +140,7 @@ test.only("scrape users from account simpler", async ({ page }) => {
     // try to scroll down to trigger infinite scroll
     const scrolledSuccessfully = await scrollDown(page);
 
-    log(`scrolled ${scrolledSuccessfully ? "" : "un"}successfully`);
+    log(`scrolled ${scrolledSuccessfully ? "" : "⚠ UN"}successfully`);
 
     if (!scrolledSuccessfully) {
       moreToLoad = false;
