@@ -1,4 +1,7 @@
 import { drizzleDb } from "db";
+import { SQL, getTableColumns, sql } from "drizzle-orm";
+import { PgTable } from "drizzle-orm/pg-core";
+import { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { log } from "src/utils";
 import { User } from "tests/scrape.model";
 import { igUserTable } from "./schema";
@@ -12,15 +15,46 @@ export const insertUser = async (user: User) => {
   log("inserted user", user.username);
 };
 
-export const insertUsers = async (users: User[]) => {
+export const insertUsersOneAtATime = async (users: User[]) => {
   await drizzleDb.transaction(async (tx) => {
     for (const user of users) {
       const userInsert: typeof igUserTable.$inferInsert = {
         ...user,
       };
 
-      await tx.insert(igUserTable).values(userInsert).execute();
+      await tx.insert(igUserTable).values(userInsert).onConflictDoUpdate({
+        target: igUserTable.id,
+        set: userInsert,
+      });
+
       log("inserted user", user.username);
     }
   });
+};
+
+// From Drizzle docu: https://orm.drizzle.team/docs/guides/upsert
+const buildConflictUpdateColumns = <
+  T extends PgTable | SQLiteTable,
+  Q extends keyof T["_"]["columns"]
+>(
+  table: T,
+  columns: Q[]
+) => {
+  const cls = getTableColumns(table);
+  return columns.reduce((acc, column) => {
+    const colName = cls[column].name;
+    acc[column] = sql.raw(`excluded.${colName}`);
+    return acc;
+  }, {} as Record<Q, SQL>);
+};
+
+export const insertUsers = async (users: User[]) => {
+  const usersInsert: (typeof igUserTable.$inferInsert)[] = users.map(
+    (user) => ({
+      ...user,
+    })
+  );
+
+  const res = await drizzleDb.insert(igUserTable).values(usersInsert).onConflictDoNothing();
+  log("inserted users", res.rowCount);
 };

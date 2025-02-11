@@ -8,7 +8,8 @@
     "scrape": "npx playwright test",
     "docker-up-and-scrape": "npm run docker-up && npm run scrape",
     "update-db-with-drizzle-schema": "npx drizzle-kit push",
-    "insert-users": "tsx ./scripts/insertUsersFromResults.ts"
+    "insert-users": "tsx ./scripts/insertFromResults/users.ts",
+    "insert-statuses": "tsx ./scripts/insertFromResults/statuses.ts"
   },
   "keywords": [],
   "author": "",

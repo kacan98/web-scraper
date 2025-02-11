@@ -5,12 +5,7 @@ import path, { dirname } from "path";
 import { login } from "scripts/ig-login";
 import { sleepApprox } from "src/utils";
 import { fileURLToPath } from "url";
-import {
-  Followers,
-  FollowingStatuses,
-  FriendshipStatus,
-  User,
-} from "./scrape.model";
+import { Followers, FollowingStatuses, UserStatus, User } from "./scrape.model";
 import { log } from "../src/utils";
 
 dotenv.config();
@@ -54,7 +49,7 @@ test.only("scrape users from account simpler", async ({ page }) => {
 
   const users: User[] = [];
   let statuses: {
-    [userId: string]: FriendshipStatus;
+    [userId: string]: UserStatus;
   } = {};
 
   while (moreToLoad && iteration < maxIterations) {
@@ -150,9 +145,7 @@ const saveUsers = async (users: User[]) => {
   fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
 };
 
-const saveStatuses = async (statuses: {
-  [userId: string]: FriendshipStatus;
-}) => {
+const saveStatuses = async (statuses: { [userId: string]: UserStatus }) => {
   const statusesPath = path.resolve(__dirname, filePathBase + "statuses.json");
   const dirPath = path.dirname(statusesPath);
 
