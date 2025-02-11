@@ -9,4 +9,4 @@ const database = process.env.POSTGRES_DB;
 
 export const dbURL = `postgres://${user}:${password}@${host}:${port}/${database}`;
 
-const db = drizzle(dbURL);
+export const drizzleDb = drizzle(dbURL);

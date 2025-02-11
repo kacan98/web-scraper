@@ -7,7 +7,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
     # the reason I have it set to a different port is because I have a local postgres running on 5432
-    # and it was causing conflicts and weirdly NOT throwing an error!
+    # and it was causing conflicts and weirdly NOT throwing an error when I ran docker-compose up with the same port!
       - "${POSTGRES_OUTPUT_PORT}:5432"
     volumes:
       - ./pgdata:/var/lib/postgresql/data

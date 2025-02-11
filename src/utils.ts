@@ -39,3 +39,10 @@ export const sleepApprox = async (page: Page, ms: number) => {
   const randomFactor = Math.random() * 0.4 + 0.8;
   await page.waitForTimeout(ms * randomFactor);
 }
+
+const LOGGING_ENABLED = true;
+export const log = (...args: any[]) => {
+  if (LOGGING_ENABLED) {
+    console.log(...args);
+  }
+};
