@@ -1,6 +1,6 @@
 import { drizzleDb } from "db";
 import { log } from "src/utils";
-import { FollowingStatuses } from "tests/scrape.model";
+import { FollowingStatuses } from "automated/get_users.spec.ts/get_users.model";
 import { igUserStatusesTable } from "./schema";
 
 export const insertStatuses = async (statuses: FollowingStatuses) => {

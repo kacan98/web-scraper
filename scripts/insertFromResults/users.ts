@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from 'url';
 import { insertUsers, insertUsersOneAtATime } from "../../db/users";
-import { User } from "../../tests/scrape.model";
+import { User } from "../../automated/get_users.spec.ts/get_users.model";
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);

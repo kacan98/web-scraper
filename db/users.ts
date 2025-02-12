@@ -3,7 +3,7 @@ import { SQL, getTableColumns, sql } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 import { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { log } from "src/utils";
-import { User } from "tests/scrape.model";
+import { User } from "automated/get_users.spec.ts/get_users.model";
 import { igUserTable } from "./schema";
 
 export const insertUser = async (user: User) => {

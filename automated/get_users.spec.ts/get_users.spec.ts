@@ -5,8 +5,8 @@ import path, { dirname } from "path";
 import { login } from "scripts/ig-login";
 import { sleepApprox } from "src/utils";
 import { fileURLToPath } from "url";
-import { Followers, FollowingStatuses, UserStatus, User } from "./scrape.model";
-import { log } from "../src/utils";
+import { Followers, FollowingStatuses, UserStatus, User } from "./get_users.model";
+import { log } from "../../src/utils";
 
 dotenv.config();
 
@@ -28,15 +28,18 @@ test.beforeEach(async ({ page }) => {
 
 const extractionType: "followers" | "following" = "followers";
 // const account = process.env.IG_LOGIN;
-// other swedish pysel lenalinderholm, ateljeristanmariab, pysslamedviktoria
+// other swedish pysel lenalinderholm, ateljeristanmariab
 // kreativakarin, fixasjalv, pysselbolaget, sabinebrandt_studio, pysselbyran, pysseldoktorn
-const accountToScrape = "pysslamedviktoria";
-if (!accountToScrape) throw new Error("IG_LOGIN not set");
+const accountToScrape = "ateljeristanmariab";
+
+if (!accountToScrape) {
+  throw new Error("IG_LOGIN not set")
+}
 
 const COLUMN_OF_FOLLOWERS_SELECTOR =
   ".xyi19xy.x1ccrb07.xtf3nb5.x1pc53ja.x1lliihq.x1iyjqo2.xs83m0k.xz65tgg.x1rife3k.x1n2onr6";
 
-test.only("scrape users from account simpler", async ({ page }) => {
+test.only("scrape users from account", async ({ page }) => {
   test.setTimeout(0);
 
   await page.goto(`https://www.instagram.com/${accountToScrape}/`);

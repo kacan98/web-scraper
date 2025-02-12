@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "npm run docker-up-and-scrape",
+    "start": "npm run docker-up-and-get_users",
     "docker-up": "docker-compose up -d",
-    "scrape": "npx playwright test",
-    "docker-up-and-scrape": "npm run docker-up && npm run scrape",
+    "get_users": "npx playwright test automated/get_users.spec.ts",
+    "docker-up-and-get_users": "npm run docker-up && npm run get_users",
     "update-db-with-drizzle-schema": "npx drizzle-kit push",
     "insert-users": "tsx ./scripts/insertFromResults/users.ts",
     "insert-statuses": "tsx ./scripts/insertFromResults/statuses.ts"

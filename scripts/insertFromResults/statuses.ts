@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { insertStatuses } from "../../db/userStatuses";
-import { FollowingStatuses } from "../../tests/scrape.model";
+import { FollowingStatuses } from "../../automated/get_users.spec.ts/get_users.model";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 
