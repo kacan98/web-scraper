@@ -1,10 +1,10 @@
 import { drizzleDb } from "db";
-import { SQL, getTableColumns, sql } from "drizzle-orm";
+import { SQL, eq, getTableColumns, sql, and } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 import { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { log } from "src/utils";
 import { User } from "automated/get_users.spec.ts/get_users.model";
-import { igUserTable } from "./schema";
+import { igUserStatusesTable, igUserTable } from "./schema";
 
 export const insertUser = async (user: User) => {
   const userInsert: typeof igUserTable.$inferInsert = {
@@ -55,6 +55,28 @@ export const insertUsers = async (users: User[]) => {
     })
   );
 
-  const res = await drizzleDb.insert(igUserTable).values(usersInsert).onConflictDoNothing();
+  const res = await drizzleDb
+    .insert(igUserTable)
+    .values(usersInsert)
+    .onConflictDoNothing();
   log("inserted users", res.rowCount);
+};
+
+export const getUsers = async (onlyPublic = true, isFollowing = false) => {
+  const usernames = await drizzleDb
+    .select({
+      username: igUserTable.username,
+      id: igUserTable.id,
+    })
+    .from(igUserTable)
+    .leftJoin(igUserStatusesTable, eq(igUserTable.id, igUserStatusesTable.id))
+    .where(
+      and(
+        onlyPublic ? eq(igUserStatusesTable.is_private, false) : undefined,
+        eq(igUserStatusesTable.following, isFollowing)
+      )
+    )
+    .execute();
+
+  return usernames;
 };

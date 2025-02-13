@@ -6,6 +6,7 @@
     "start": "npm run docker-up-and-get_users",
     "docker-up": "docker-compose up -d",
     "get_users": "npx playwright test automated/get_users.spec.ts",
+    "follow-users": "npx playwright test automated/follow/toggle.spec.ts",
     "docker-up-and-get_users": "npm run docker-up && npm run get_users",
     "update-db-with-drizzle-schema": "npx drizzle-kit push",
     "insert-users": "tsx ./scripts/insertFromResults/users.ts",

@@ -13,7 +13,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const cookiesPath = path.resolve(__dirname, "../cookies.json");
+const cookiesPath = path.join(__dirname, "/cookies.json");
 
 test.beforeAll(async () => {
   if (!process.env.IG_LOGIN) throw new Error("IG_LOGIN not set");

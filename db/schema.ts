@@ -32,8 +32,8 @@ export const igUserTable = pgTable("ig_users", {
   scrapedFrom_type: userRoleEnum().notNull(),
 });
 
-export const usersRelations = relations(igUserTable, ({ one }) => ({
-  invitee: one(igUserTable, {
+export const scrapedOriginRelation = relations(igUserTable, ({ one }) => ({
+  scraped_from: one(igUserTable, {
     fields: [igUserTable.scrapedFrom_full_name],
     references: [igUserTable.full_name],
   }),
@@ -42,8 +42,6 @@ export const usersRelations = relations(igUserTable, ({ one }) => ({
 export const igUserStatusesTable = pgTable(
   "ig_user_statuses",
   {
-    me: varchar().notNull().default(process.env.IG_LOGIN),
-
     //oficial IG fields:
     id: varchar().primaryKey(),
     following: boolean(),
@@ -53,25 +51,18 @@ export const igUserStatusesTable = pgTable(
     is_restricted: boolean(),
     outgoing_request: boolean(),
     is_feed_favorite: boolean(),
+
+    //custom fields:
+    me: varchar().notNull().default(process.env.IG_LOGIN),
+    follower: boolean(),
+    i_followed_in_the_past: boolean(),
   },
   (t) => [unique("combination of me and id").on(t.me, t.id)]
 );
 
-export const followStatus = pgTable(
-  "ig_follow_status",
-  {
-    me: varchar().primaryKey().default(process.env.IG_LOGIN),
-    them: varchar().notNull(),
-    iFollow: boolean(),
-    theyFollow: boolean(),
-    iFollowedInThePast: boolean(),
-  },
-  (t) => [unique("combination of me and them").on(t.me, t.them)]
-);
-
-export const followStatusRelations = relations(followStatus, ({ one }) => ({
-  user: one(igUserTable, {
-    fields: [followStatus.me, followStatus.them],
-    references: [igUserTable.full_name, igUserTable.full_name],
+export const userStatusRelation = relations(igUserStatusesTable, ({ one }) => ({
+  statusUserRelation: one(igUserTable, {
+    fields: [igUserStatusesTable.id],
+    references: [igUserTable.id],
   }),
 }));
