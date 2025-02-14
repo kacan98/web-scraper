@@ -27,6 +27,7 @@ export const igUserTable = pgTable("ig_users", {
 
   followers: integer(),
   following: integer(),
+  posts: integer(),
 
   scrapedFrom_full_name: varchar().notNull(),
   scrapedFrom_type: userRoleEnum().notNull(),

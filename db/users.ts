@@ -5,6 +5,7 @@ import { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { log } from "src/utils";
 import { User } from "automated/get_users.spec.ts/get_users.model";
 import { igUserStatusesTable, igUserTable } from "./schema";
+import { PartialExcept } from "src/utils.model";
 
 export const insertUser = async (user: User) => {
   const userInsert: typeof igUserTable.$inferInsert = {
@@ -30,22 +31,6 @@ export const insertUsersOneAtATime = async (users: User[]) => {
       log("inserted user", user.username);
     }
   });
-};
-
-// From Drizzle docu: https://orm.drizzle.team/docs/guides/upsert
-const buildConflictUpdateColumns = <
-  T extends PgTable | SQLiteTable,
-  Q extends keyof T["_"]["columns"]
->(
-  table: T,
-  columns: Q[]
-) => {
-  const cls = getTableColumns(table);
-  return columns.reduce((acc, column) => {
-    const colName = cls[column].name;
-    acc[column] = sql.raw(`excluded.${colName}`);
-    return acc;
-  }, {} as Record<Q, SQL>);
 };
 
 export const insertUsers = async (users: User[]) => {
@@ -79,4 +64,12 @@ export const getUsers = async (onlyPublic = true, isFollowing = false) => {
     .execute();
 
   return usernames;
+};
+
+export const updateUser = async (user: PartialExcept<User, 'id'>) => {
+  await drizzleDb
+    .update(igUserTable)
+    .set(user)
+    .where(eq(igUserTable.id, user.id))
+    .execute();
 };

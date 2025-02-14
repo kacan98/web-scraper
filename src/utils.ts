@@ -35,14 +35,42 @@ export function isValidUrl(url: string): boolean {
 }
 
 //waits for with a 20% margin of error
-export const sleepApprox = async (page: Page, ms: number) => {
+export const sleepApprox = async (
+  page: Page,
+  ms: number,
+  ignoreLog = false
+) => {
   const randomFactor = Math.random() * 0.4 + 0.8;
-  await page.waitForTimeout(ms * randomFactor);
-}
+  const timeToWait = ms * randomFactor;
+  if (!ignoreLog && timeToWait > 2000) log(`Waiting for ${timeToWait / 1000} s`);
+  await page.waitForTimeout(timeToWait);
+};
+
+export const forever = async () => {
+  log("Waiting forever");
+  return new Promise(() => {});
+};
+
+export const randomInt = (min: number, max: number) => {
+  return Math.floor(Math.random() * (max - min + 1) + min);
+};
+
+export const flipACoin = (probabilityForSuccess: number = 0.5) => {
+  if (probabilityForSuccess > 1 || probabilityForSuccess < 0)
+    throw new Error("Probability must be between 0 and 1");
+  return Math.random() < probabilityForSuccess;
+};
 
 const LOGGING_ENABLED = true;
+
 export const log = (...args: any[]) => {
   if (LOGGING_ENABLED) {
     console.log(...args);
+  }
+};
+
+export const errorLog = (...args: any[]) => {
+  if (LOGGING_ENABLED) {
+    console.error(...args);
   }
 };
