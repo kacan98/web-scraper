@@ -3,11 +3,10 @@ import { SQL, eq, getTableColumns, sql, and } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 import { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { log } from "src/utils";
-import { User } from "automated/get_users.spec.ts/get_users.model";
-import { igUserStatusesTable, igUserTable } from "./schema";
+import { igUserStatusesTable, igUserTable, IgUserTableType } from './schema';
 import { PartialExcept } from "src/utils.model";
 
-export const insertUser = async (user: User) => {
+export const insertUser = async (user: IgUserTableType) => {
   const userInsert: typeof igUserTable.$inferInsert = {
     ...user,
   };
@@ -16,7 +15,7 @@ export const insertUser = async (user: User) => {
   log("inserted user", user.username);
 };
 
-export const insertUsersOneAtATime = async (users: User[]) => {
+export const insertUsersOneAtATime = async (users: IgUserTableType[]) => {
   await drizzleDb.transaction(async (tx) => {
     for (const user of users) {
       const userInsert: typeof igUserTable.$inferInsert = {
@@ -33,7 +32,7 @@ export const insertUsersOneAtATime = async (users: User[]) => {
   });
 };
 
-export const insertUsers = async (users: User[]) => {
+export const insertUsers = async (users: IgUserTableType[]) => {
   const usersInsert: (typeof igUserTable.$inferInsert)[] = users.map(
     (user) => ({
       ...user,
@@ -66,7 +65,7 @@ export const getUsers = async (onlyPublic = true, isFollowing = false) => {
   return usernames;
 };
 
-export const updateUser = async (user: PartialExcept<User, 'id'>) => {
+export const updateUser = async (user: PartialExcept<IgUserTableType, "id">) => {
   await drizzleDb
     .update(igUserTable)
     .set(user)

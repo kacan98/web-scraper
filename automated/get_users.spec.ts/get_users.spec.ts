@@ -3,15 +3,17 @@ import dotenv from "dotenv";
 import fs from "fs";
 import path, { dirname } from "path";
 import { login } from "scripts/ig-login";
-import { errorLog, saveInFile, sleepApprox } from "src/utils";
+import { errorLog, forever, saveInFile, sleepApprox } from "src/utils";
 import { fileURLToPath } from "url";
 import {
   Followers,
   FollowingStatuses,
-  UserStatus,
-  User,
+  IGFollowingStatus,
+  IGUser,
 } from "./get_users.model";
 import { log } from "../../src/utils";
+import { insertUsers } from "db/users";
+import { insertStatuses } from "db/userStatuses";
 
 dotenv.config();
 
@@ -44,8 +46,6 @@ const COLUMN_OF_FOLLOWERS_SELECTOR =
   ".xyi19xy.x1ccrb07.xtf3nb5.x1pc53ja.x1lliihq.x1iyjqo2.xs83m0k.xz65tgg.x1rife3k.x1n2onr6";
 
 test.only("scrape users from account", async ({ page }) => {
-  errorLog(new Error("This is an error"));
-
   test.setTimeout(0);
 
   await page.goto(`https://www.instagram.com/${accountToScrape}/`);
@@ -56,14 +56,14 @@ test.only("scrape users from account", async ({ page }) => {
   const maxIterations = 300;
   let iteration = 0;
 
-  const users: User[] = [];
+  const users: IGUser[] = [];
   let statuses: {
-    [userId: string]: UserStatus;
+    [userId: string]: IGFollowingStatus;
   } = {};
 
   while (moreToLoad && iteration < maxIterations) {
     iteration++;
-    log("Starting iteration nr ", iteration);
+    log("\n \n Starting iteration nr ", iteration);
 
     const followersPromise = page.waitForResponse("**/followers/?count**", {
       timeout,
@@ -95,9 +95,12 @@ test.only("scrape users from account", async ({ page }) => {
         Object.keys(statuses).length
       } statuses`
     );
-    saveUsers(users);
-    saveStatuses(statuses);
-    log("saved");
+    saveUsersLocally(users);
+    saveStatusesLocally(statuses);
+
+    await saveUsersInDb(followers.users);
+    await saveStatusesInDb(followingStatuses);
+    log("saved in db");
 
     //make  sure we don't do too many requests too fast
     log("waiting");
@@ -142,11 +145,27 @@ const scrollDown = async (page: Page): Promise<boolean> => {
 //Saving stuff 👇
 const filePathBase = `${accountToScrape}_${extractionType}_`;
 
-const saveUsers = async (users: User[]) => {
+const saveUsersLocally = async (users: IGUser[]) => {
   saveInFile("results", filePathBase + "users", "json", users);
 };
 
-const saveStatuses = async (statuses: { [userId: string]: UserStatus }) => {
+const saveStatusesLocally = async (statuses: {
+  [userId: string]: IGFollowingStatus;
+}) => {
   saveInFile("results", filePathBase + "statuses", "json", statuses);
+};
+
+const saveUsersInDb = async (users: IGUser[]) => {
+  await insertUsers(
+    users.map((u) => ({
+      ...u,
+      scrapedFrom_full_name: accountToScrape,
+      scrapedFrom_type: "user",
+    }))
+  );
+};
+
+const saveStatusesInDb = async (statuses: FollowingStatuses) => {
+  await insertStatuses(statuses.friendship_statuses);
 };
 //Saving stuff 👆

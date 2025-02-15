@@ -4,7 +4,11 @@ import { FollowingStatuses } from "automated/get_users.spec.ts/get_users.model";
 import { igUserStatusesTable } from "./schema";
 import { eq } from "drizzle-orm";
 
-export const insertStatuses = async (statuses: FollowingStatuses) => {
+export const insertStatuses = async (statuses: FollowingStatuses['friendship_statuses']) => {
+  if(statuses.friendship_statuses) {
+    throw new Error("This probably happens because you're sending the whole object instead of just the statuses");
+  }
+
   const statusesInsert: (typeof igUserStatusesTable.$inferInsert)[] =
     Object.entries(statuses).map(([userId, status]) => ({
       id: userId,

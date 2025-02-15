@@ -11,6 +11,7 @@ export const userRoleEnum = pgEnum("scrapedFrom_type", [
   "location",
 ]);
 
+
 export const igUserTable = pgTable("ig_users", {
   id: varchar().primaryKey(),
   username: varchar({ length: 255 }).unique(),
@@ -32,6 +33,10 @@ export const igUserTable = pgTable("ig_users", {
   scrapedFrom_full_name: varchar().notNull(),
   scrapedFrom_type: userRoleEnum().notNull(),
 });
+
+//This is different from what we get from IG - because of some custom fields
+//It's important to keep them separated so that we get the right errors when saving in db
+export type IgUserTableType = typeof igUserTable.$inferInsert;
 
 export const scrapedOriginRelation = relations(igUserTable, ({ one }) => ({
   scraped_from: one(igUserTable, {

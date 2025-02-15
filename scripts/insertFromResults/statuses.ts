@@ -19,21 +19,23 @@ const resultsDir = process.env.RESULTS_DIR || "./results";
 const userStatusesPath = path.join(resultsDir, statusesFileName);
 
 const insertStatusesFromResults = async () => {
-  const statuses: FollowingStatuses = JSON.parse(
+  const statuses: FollowingStatuses["friendship_statuses"] = JSON.parse(
     fs.readFileSync(userStatusesPath, "utf8")
   );
 
   insertStatuses(statuses);
 };
 
-const fileNames = fs.readdirSync(resultsDir).filter((f) => f.endsWith("_statuses.json"));
+const fileNames = fs
+  .readdirSync(resultsDir)
+  .filter((f) => f.endsWith("_statuses.json"));
 
 const insertAllStatusesFromResults = async () => {
-    fileNames.forEach((fileName) => {
-        const statuses: FollowingStatuses = JSON.parse(
-        fs.readFileSync(path.join(resultsDir, fileName), "utf8")
-        );
-    
-        insertStatuses(statuses);
-    });
+  fileNames.forEach((fileName) => {
+    const statuses: FollowingStatuses["friendship_statuses"] = JSON.parse(
+      fs.readFileSync(path.join(resultsDir, fileName), "utf8")
+    );
+
+    insertStatuses(statuses);
+  });
 };
