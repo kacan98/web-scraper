@@ -1,5 +1,5 @@
 import { Page, test } from "@playwright/test";
-import { getUsers, updateUser } from "db/users";
+import { getUsers, updateUser, removeUser } from "db/users";
 import { setFollowing } from "db/userStatuses";
 import dotenv from "dotenv";
 import fs from "fs";
@@ -11,8 +11,11 @@ import { fileURLToPath } from "url";
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+
 const MAX_USERS_TO_FOLLOW = 50;
+const MIN_FOLLOWERS = 30;
+const MIN_POSTS = 5;
+const MIN_FOLLOWERS_TO_FOLLOWING_RATIO = 0.5;
 
 const IMAGE_SELECTOR = "._aagw";
 
@@ -30,6 +33,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.only("follow or unfollow", async ({ page }) => {
+  // errorLog(new Error("This is a test"));
   test.setTimeout(0);
 
   log("Getting users to follow...");
@@ -38,10 +42,27 @@ test.only("follow or unfollow", async ({ page }) => {
   log("Starting to follow...");
 
   for (const user of users.slice(0, MAX_USERS_TO_FOLLOW)) {
-    await page.goto(`https://www.instagram.com/${user.username}/`);
+    log("\n \n Going to ", user.username);
+    try {
+      await page.goto(`https://www.instagram.com/${user.username}/`, {
+        timeout: 5000,
+      });
+    } catch (e) {
+      errorLog(e, "Failed to go to ", user.username);
+      continue;
+    }
 
     await sleepApprox(page, 5000);
 
+    //"this page isn't available" will display if the user is not found
+    const notFound = await page.isVisible("text=This page isn't available.");
+    if (notFound) {
+      log("User not found");
+      removeUser(user.id, user.username);
+      continue;
+    }
+
+    log("Getting stats");
     const { followers, following, posts } = await getStats(page);
     await updateUser({
       id: user.id,
@@ -49,19 +70,22 @@ test.only("follow or unfollow", async ({ page }) => {
       following,
       posts,
     });
+    log("Stats for ", user.username, " are: ", { followers, following, posts });
 
-    let followable = followers && followers > 20 && posts && posts > 5;
+    let followable =
+      followers && followers > MIN_FOLLOWERS && posts && posts > MIN_POSTS;
 
     if (followable && following && followers) {
       const ratio = following / followers;
       //if they are not following anyone, don't follow them
-      if (ratio < 0.5) {
-        log("Not following ", user.username, " because of ratio ", ratio);
+      if (ratio < MIN_FOLLOWERS_TO_FOLLOWING_RATIO) {
         followable = false;
       }
     }
 
     if (!followable) {
+      log("Not following ", user.username);
+      await removeUser(user.id, user.username);
       continue;
     }
 
@@ -116,7 +140,7 @@ const getStats = async (
     );
     const textLocator = page.getByText(regEx);
 
-    const text = await textLocator.innerText();
+    const text = await textLocator.innerText({ timeout: 4000 });
 
     // Replace K with 000 and M with 000000
     const numberText = text

@@ -3,17 +3,20 @@ import dotenv from "dotenv";
 import fs from "fs";
 import path, { dirname } from "path";
 import { login } from "scripts/ig-login";
-import { sleepApprox } from "src/utils";
+import { errorLog, saveInFile, sleepApprox } from "src/utils";
 import { fileURLToPath } from "url";
-import { Followers, FollowingStatuses, UserStatus, User } from "./get_users.model";
+import {
+  Followers,
+  FollowingStatuses,
+  UserStatus,
+  User,
+} from "./get_users.model";
 import { log } from "../../src/utils";
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-const cookiesPath = path.join(__dirname, "/cookies.json");
 
 test.beforeAll(async () => {
   if (!process.env.IG_LOGIN) throw new Error("IG_LOGIN not set");
@@ -22,6 +25,7 @@ test.beforeAll(async () => {
 });
 
 test.beforeEach(async ({ page }) => {
+  const cookiesPath = path.join("cookies.json");
   const cookies = JSON.parse(fs.readFileSync(cookiesPath, "utf8"));
   await page.context().addCookies(cookies);
 });
@@ -33,13 +37,15 @@ const extractionType: "followers" | "following" = "followers";
 const accountToScrape = "ateljeristanmariab";
 
 if (!accountToScrape) {
-  throw new Error("IG_LOGIN not set")
+  throw new Error("IG_LOGIN not set");
 }
 
 const COLUMN_OF_FOLLOWERS_SELECTOR =
   ".xyi19xy.x1ccrb07.xtf3nb5.x1pc53ja.x1lliihq.x1iyjqo2.xs83m0k.xz65tgg.x1rife3k.x1n2onr6";
 
 test.only("scrape users from account", async ({ page }) => {
+  errorLog(new Error("This is an error"));
+
   test.setTimeout(0);
 
   await page.goto(`https://www.instagram.com/${accountToScrape}/`);
@@ -134,28 +140,13 @@ const scrollDown = async (page: Page): Promise<boolean> => {
 };
 
 //Saving stuff 👇
-const dateAndTime = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
-const filePathBase = `../results/${accountToScrape}_${extractionType}_${dateAndTime}_`;
+const filePathBase = `${accountToScrape}_${extractionType}_`;
 
 const saveUsers = async (users: User[]) => {
-  const usersPath = path.resolve(__dirname, filePathBase + "users.json");
-  const dirPath = path.dirname(usersPath);
-
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
-  }
-
-  fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+  saveInFile("results", filePathBase + "users", "json", users);
 };
 
 const saveStatuses = async (statuses: { [userId: string]: UserStatus }) => {
-  const statusesPath = path.resolve(__dirname, filePathBase + "statuses.json");
-  const dirPath = path.dirname(statusesPath);
-
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
-  }
-
-  fs.writeFileSync(statusesPath, JSON.stringify(statuses, null, 2));
+  saveInFile("results", filePathBase + "statuses", "json", statuses);
 };
 //Saving stuff 👆

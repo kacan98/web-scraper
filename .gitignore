@@ -10,3 +10,4 @@ cookies.json
 # Ignore the postgres data directory in the root - that's the volume we're mounting
 /pgdata/
 /.*/
+/errors/

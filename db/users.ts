@@ -73,3 +73,8 @@ export const updateUser = async (user: PartialExcept<User, 'id'>) => {
     .where(eq(igUserTable.id, user.id))
     .execute();
 };
+
+export const removeUser = async (id: string, user_name?: string | null) => {
+  log(`removing user ${user_name || ""}`, id);
+  await drizzleDb.delete(igUserTable).where(eq(igUserTable.id, id)).execute();
+};
