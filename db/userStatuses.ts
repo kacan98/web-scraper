@@ -44,3 +44,18 @@ export const setFollowing = async ({
     .where(eq(igUserStatusesTable.id, userId))
     .execute();
 };
+
+export const markAsNotworthFollowing = async (
+  userId: string,
+  username?: string | null
+) => {
+  await db
+    .update(igUserStatusesTable)
+    .set({
+      notWorthFollowing: true,
+    })
+    .where(eq(igUserStatusesTable.id, userId))
+    .execute();
+
+  log("successfully marked", username, "as not worth following");
+};

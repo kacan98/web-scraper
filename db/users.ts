@@ -1,5 +1,5 @@
 import { db } from "db";
-import { SQL, eq, getTableColumns, sql, and } from "drizzle-orm";
+import { SQL, eq, getTableColumns, sql, and, not } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 import { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { log } from "src/utils";
@@ -50,10 +50,12 @@ export const getUsers = async ({
   onlyPublic = true,
   isFollowing = false,
   top,
+  removeThoseThatAreNotWorthFollowing = true,
 }: {
   onlyPublic?: boolean;
   isFollowing?: boolean;
   top?: number;
+  removeThoseThatAreNotWorthFollowing?: boolean;
 } = {}) => {
   const usernamesPromise = db
     .select({
@@ -65,7 +67,10 @@ export const getUsers = async ({
     .where(
       and(
         onlyPublic ? eq(igUserStatusesTable.is_private, false) : undefined,
-        eq(igUserStatusesTable.following, isFollowing)
+        eq(igUserStatusesTable.following, isFollowing),
+        // removeThoseThatAreNotWorthFollowing
+        //   ? not(eq(igUserStatusesTable.notWorthFollowing, true))
+        //   : undefined
       )
     );
 

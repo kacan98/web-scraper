@@ -1,7 +1,7 @@
 import { Page, test } from "@playwright/test";
 import { getFollowedToday, incrementFollowedToday } from "db/followed_today";
 import { getUsers, updateUser, removeUser } from "db/users";
-import { setFollowing } from "db/userStatuses";
+import { markAsNotworthFollowing, setFollowing } from "db/userStatuses";
 import dotenv from "dotenv";
 import fs from "fs";
 import path, { dirname } from "path";
@@ -43,9 +43,9 @@ test.only("follow or unfollow", async ({ page }) => {
   }
 
   log(
-    "I will go on till I have followed ",
-    MAX_USERS_TO_FOLLOW,
-    " users today"
+    "I need to follow ",
+    MAX_USERS_TO_FOLLOW - followedTodaySoFar,
+    " more users today"
   );
 
   // errorLog(new Error("This is a test"));
@@ -58,7 +58,12 @@ test.only("follow or unfollow", async ({ page }) => {
   log("Found ", users.length, " users!");
   log("Starting to follow...");
 
-  for (const user of users.slice(0, MAX_USERS_TO_FOLLOW - followedTodaySoFar)) {
+  for (const user of users) {
+    if (followedTodaySoFar >= MAX_USERS_TO_FOLLOW) {
+      log("Followed the max number of users today");
+      break;
+    }
+
     log("\n \nGoing to ", user.username);
     try {
       await page.goto(`https://www.instagram.com/${user.username}/`, {
@@ -69,7 +74,7 @@ test.only("follow or unfollow", async ({ page }) => {
       continue;
     }
     log("Still need to follow ", MAX_USERS_TO_FOLLOW - followedTodaySoFar);
-    
+
     await sleepApprox(page, 5000);
 
     //"this page isn't available" will display if the user is not found
@@ -103,7 +108,7 @@ test.only("follow or unfollow", async ({ page }) => {
 
     if (!followable) {
       log("Not following ", user.username);
-      await removeUser(user.id, user.username);
+      await markAsNotworthFollowing(user.id, user.username);
       continue;
     }
 

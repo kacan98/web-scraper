@@ -2,9 +2,12 @@ import { db } from "db"
 import { numberFollowedTodayTable } from "./schema"
 import { eq, sql,and } from "drizzle-orm"
 
+
 const today = new Date().toISOString().split("T")[0]
 
 export const incrementFollowedToday = async () => {
+    if (!process.env.IG_LOGIN) throw new Error("IG_LOGIN not set");
+        
     await db
     .insert(numberFollowedTodayTable)
     .values({

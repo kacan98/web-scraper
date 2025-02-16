@@ -62,6 +62,7 @@ export const igUserStatusesTable = pgTable(
     me: varchar().notNull().default(process.env.IG_LOGIN),
     follower: boolean(),
     i_followed_in_the_past: boolean(),
+    notWorthFollowing: boolean()
   },
   (t) => [unique("combination of me and id").on(t.me, t.id)]
 );
@@ -78,7 +79,7 @@ export const numberFollowedTodayTable = pgTable(
   {
     id: varchar({ length: 10 }).primaryKey(), //date in format YYYY-MM-DD
     number: integer(),
-    me: varchar().notNull().default(process.env.IG_LOGIN),
+    me: varchar().notNull(),
   },
   (t) => [
     unique("only_one_me_and_id_combo").on(t.me, t.id),
