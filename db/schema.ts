@@ -1,4 +1,5 @@
-import { unique } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { check, unique } from "drizzle-orm/pg-core";
 import { PgColumn, pgEnum, text, varchar } from "drizzle-orm/pg-core";
 import { integer, pgTable, boolean } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm/relations";
@@ -10,7 +11,6 @@ export const userRoleEnum = pgEnum("scrapedFrom_type", [
   "hashtag",
   "location",
 ]);
-
 
 export const igUserTable = pgTable("ig_users", {
   id: varchar().primaryKey(),
@@ -72,3 +72,17 @@ export const userStatusRelation = relations(igUserStatusesTable, ({ one }) => ({
     references: [igUserTable.id],
   }),
 }));
+
+export const numberFollowedTodayTable = pgTable(
+  "number_followed_today",
+  {
+    id: varchar({ length: 10 }).primaryKey(), //date in format YYYY-MM-DD
+    number: integer(),
+    me: varchar().notNull().default(process.env.IG_LOGIN),
+  },
+  (t) => [
+    unique("only_one_me_and_id_combo").on(t.me, t.id),
+    //check the format of the date
+    check("date_format", sql`${t.id} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'`),
+  ]
+);

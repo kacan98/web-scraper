@@ -1,4 +1,5 @@
 import { Page, test } from "@playwright/test";
+import { getFollowedToday, incrementFollowedToday } from "db/followed_today";
 import { getUsers, updateUser, removeUser } from "db/users";
 import { setFollowing } from "db/userStatuses";
 import dotenv from "dotenv";
@@ -33,25 +34,42 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.only("follow or unfollow", async ({ page }) => {
+  let followedTodaySoFar = (await getFollowedToday()) || 0;
+  log("Followed today so far: ", followedTodaySoFar);
+
+  if (followedTodaySoFar > MAX_USERS_TO_FOLLOW) {
+    log("Already followed ", followedTodaySoFar, " users today. Skipping");
+    return;
+  }
+
+  log(
+    "I will go on till I have followed ",
+    MAX_USERS_TO_FOLLOW,
+    " users today"
+  );
+
   // errorLog(new Error("This is a test"));
   test.setTimeout(0);
 
   log("Getting users to follow...");
-  const users = await getUsers();
+  const users = await getUsers({
+    top: (MAX_USERS_TO_FOLLOW - followedTodaySoFar) * 3, // get more users than needed
+  });
   log("Found ", users.length, " users!");
   log("Starting to follow...");
 
-  for (const user of users.slice(0, MAX_USERS_TO_FOLLOW)) {
-    log("\n \n Going to ", user.username);
+  for (const user of users.slice(0, MAX_USERS_TO_FOLLOW - followedTodaySoFar)) {
+    log("\n \nGoing to ", user.username);
     try {
       await page.goto(`https://www.instagram.com/${user.username}/`, {
-        timeout: 5000,
+        timeout: 10000,
       });
     } catch (e) {
       errorLog(e, "Failed to go to ", user.username);
       continue;
     }
-
+    log("Still need to follow ", MAX_USERS_TO_FOLLOW - followedTodaySoFar);
+    
     await sleepApprox(page, 5000);
 
     //"this page isn't available" will display if the user is not found
@@ -96,6 +114,7 @@ test.only("follow or unfollow", async ({ page }) => {
 
       await sleepApprox(page, 3000);
       successfullyFollowed = true;
+      followedTodaySoFar++;
     } catch (e) {
       log("Failed to follow", user.username);
     }
@@ -106,6 +125,7 @@ test.only("follow or unfollow", async ({ page }) => {
         userId: user.id,
         following: true,
       });
+      await incrementFollowedToday();
     }
 
     try {
@@ -140,8 +160,12 @@ const getStats = async (
     );
     const textLocator = page.getByText(regEx);
 
-    const text = await textLocator.innerText({ timeout: 4000 });
-
+    let text = "";
+    try {
+      text = await textLocator.innerText({ timeout: 10000 });
+    } catch (e) {
+      log("Failed to get text for", selector);
+    }
     // Replace K with 000 and M with 000000
     const numberText = text
       .replace(/,/g, "")

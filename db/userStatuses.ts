@@ -1,12 +1,16 @@
-import { drizzleDb } from "db";
+import { db } from "db";
 import { log } from "src/utils";
 import { FollowingStatuses } from "automated/get_users.spec.ts/get_users.model";
 import { igUserStatusesTable } from "./schema";
 import { eq } from "drizzle-orm";
 
-export const insertStatuses = async (statuses: FollowingStatuses['friendship_statuses']) => {
-  if(statuses.friendship_statuses) {
-    throw new Error("This probably happens because you're sending the whole object instead of just the statuses");
+export const insertStatuses = async (
+  statuses: FollowingStatuses["friendship_statuses"]
+) => {
+  if (statuses.friendship_statuses) {
+    throw new Error(
+      "This probably happens because you're sending the whole object instead of just the statuses"
+    );
   }
 
   const statusesInsert: (typeof igUserStatusesTable.$inferInsert)[] =
@@ -15,7 +19,7 @@ export const insertStatuses = async (statuses: FollowingStatuses['friendship_sta
       ...status,
     }));
 
-  const res = await drizzleDb
+  const res = await db
     .insert(igUserStatusesTable)
     .values(statusesInsert)
     .onConflictDoNothing()
@@ -30,7 +34,7 @@ export const setFollowing = async ({
   userId: string;
   following: boolean;
 }) => {
-  const res = await drizzleDb
+  const res = await db
     .update(igUserStatusesTable)
     .set({
       following: following,
