@@ -3,9 +3,19 @@ import {
   areWeOnDoesntExistPage,
   logIntoInstagram,
 } from "automated/instagram/instagram-utils";
-import { getFollowedToday, incrementFollowedToday } from "db/followed_today";
-import { getUsers, removeUser, updateUser } from "db/users";
-import { markAsNotworthFollowing, setFollowing } from "db/userStatuses";
+import {
+  getFollowedToday,
+  incrementFollowedToday,
+} from "automated/instagram/follow/followed_today.db";
+import {
+  getUsers,
+  removeUser,
+  updateUser,
+} from "automated/instagram/users/users.db";
+import {
+  markAsNotworthFollowing,
+  setFollowing,
+} from "automated/instagram/users/userStatuses.db";
 import dotenv from "dotenv";
 import { errorLog, flipACoin, log, randomInt, sleepApprox } from "src/utils";
 

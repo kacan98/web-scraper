@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { insertStatuses } from "../../db/userStatuses";
+import { insertStatuses } from "../../automated/instagram/users/userStatuses.db";
 import { IGStatuses } from "../../automated/instagram/users/get_users.model";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";

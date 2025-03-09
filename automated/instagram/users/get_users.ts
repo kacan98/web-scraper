@@ -1,6 +1,6 @@
 import { Page, test } from "@playwright/test";
-import { insertUsers } from "db/users";
-import { insertStatuses } from "db/userStatuses";
+import { insertUsers } from "automated/instagram/users/users.db";
+import { insertStatuses } from "automated/instagram/users/userStatuses.db";
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";

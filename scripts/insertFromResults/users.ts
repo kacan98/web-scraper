@@ -1,7 +1,10 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { insertUsers, insertUsersOneAtATime } from "../../db/users";
+import {
+  insertUsers,
+  insertUsersOneAtATime,
+} from "../../automated/instagram/users/users.db";
 import { IgUserTableType } from "db/schema";
 
 // Get the directory name
