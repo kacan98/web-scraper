@@ -1,4 +1,5 @@
 import { openInstagramCmdMenu } from "automated/instagram/instagram-cmd";
+import { openLinkedinCmdMenu } from "automated/linkedin/linkedin-cmd";
 import inquirer from "inquirer";
 
 enum MainMenuActions {
@@ -24,7 +25,7 @@ const mainMenu = async () => {
       openInstagramCmdMenu();
       break;
     case MainMenuActions.LINKEDIN:
-      console.log("Opening LinkedIn...");
+      openLinkedinCmdMenu();
       break;
     case MainMenuActions.EXIT:
       console.log("Exiting...");

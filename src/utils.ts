@@ -24,7 +24,7 @@ export const tabToNextElement = async (
   return res;
 };
 
-export function isValidUrl(url: string): boolean {
+export const isValidUrl = (url: string): boolean => {
   const urlPattern = new RegExp(
     "^(https?:\\/\\/)?" + // protocol
       "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.?)+[a-z]{2,}|" + // domain name
@@ -50,7 +50,7 @@ export const sleepApprox = async (
   await page.waitForTimeout(timeToWait);
 };
 
-export const forever = async () => {
+export const waitForever = async () => {
   log("Waiting forever");
   return new Promise(() => {});
 };

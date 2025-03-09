@@ -8,15 +8,49 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const cookiesPath = path.resolve(__dirname, "../instagram-cookies.json");
-
 const username = process.env.IG_LOGIN;
 const password = process.env.IG_PASSWORD;
 if (!username || !password)
   throw new Error("IG_USERNAME or IG_PASSWORD not set");
 
-export const getInstagramCookies = async (): Promise<Cookie[]> => {
+export type ScrapingPlatform = keyof typeof platformSpecifics;
+
+const platformSpecifics = {
+  instagram: {
+    pathToCookies: "../instagram-cookies.json",
+    loginUrl: "https://www.instagram.com",
+    selectors: {
+      afterNavigateButton: 'text="Allow all cookies"',
+      username: 'input[name="username"]',
+      password: 'input[name="password"]',
+      afterLoginConfirm: "nav",
+    },
+  },
+  linkedin: {
+    pathToCookies: "../linkedin-cookies.json",
+    loginUrl: "https://www.linkedin.com",
+    selectors: {
+      afterNavigateButton:
+        "a[data-tracking-control-name='guest_homepage-basic_nav-header-signin']",
+      username: 'input[id="username"]',
+      password: 'input[id="password"]',
+      afterLoginConfirm: 'strong:has-text("Start a post")',
+    },
+  },
+};
+
+export const getCookies = async ({
+  platform,
+}: {
+  platform: ScrapingPlatform;
+}): Promise<Cookie[]> => {
   let cookies: Cookie[] | undefined;
+
+  const cookiesPath = path.resolve(
+    __dirname,
+    platformSpecifics[platform].pathToCookies
+  );
+
   if (fs.existsSync(cookiesPath)) {
     cookies = JSON.parse(fs.readFileSync(cookiesPath, "utf8"));
   }
@@ -26,7 +60,7 @@ export const getInstagramCookies = async (): Promise<Cookie[]> => {
     const context = await browser.newContext();
     const page = await context.newPage();
 
-    cookies = await logIntoInstagramManually({ page, context });
+    cookies = await logIntoInstagramManually({ page, context, platform });
 
     fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
     await browser.close();
@@ -43,26 +77,36 @@ export const getInstagramCookies = async (): Promise<Cookie[]> => {
 const logIntoInstagramManually = async ({
   page,
   context,
+  platform,
 }: {
   page: Page;
   context: BrowserContext;
+  platform: ScrapingPlatform;
 }): Promise<Cookie[]> => {
+  const platformDetails = platformSpecifics[platform];
   //set longer timeout
   page.setDefaultTimeout(1000 * 60 * 5);
 
-  await page.goto("https://www.instagram.com");
+  await page.goto(platformDetails.loginUrl);
 
   console.log("Please log in manually...");
-  await page.click('text="Allow all cookies"');
+
+  const {
+    username: usernameSelector,
+    password: passwordSelector,
+    afterLoginConfirm,
+    afterNavigateButton,
+  } = platformDetails.selectors;
+  await page.click(afterNavigateButton);
 
   //fill in the username and password
-  await page.fill('input[name="username"]', username);
-  await page.fill('input[name="password"]', password);
+  await page.fill(usernameSelector, username);
+  await page.fill(passwordSelector, password);
 
   await page.click('button[type="submit"]');
 
   //wait for nav to appear
-  await page.waitForSelector("nav");
+  await page.waitForSelector(afterLoginConfirm);
 
   const cookies = await context.cookies();
 

@@ -1,5 +1,8 @@
 import { Page } from "@playwright/test";
-import { areWeOnDoesntExistPage, logIntoInstagram } from "automated/instagram/instagram-utils";
+import {
+  areWeOnDoesntExistPage,
+  login,
+} from "automated/instagram/instagram-utils";
 import { insertUsers } from "automated/instagram/users/users.db";
 import { insertStatuses } from "automated/instagram/users/userStatuses.db";
 import dotenv from "dotenv";
@@ -19,7 +22,7 @@ dotenv.config();
 export enum ExtractionType {
   FOLLOWERS = "followers",
   FOLLOWING = "following",
-};
+}
 
 const COLUMN_OF_FOLLOWERS_SELECTOR =
   ".xyi19xy.x1ccrb07.xtf3nb5.x1pc53ja.x1lliihq.x1iyjqo2.xs83m0k.xz65tgg.x1rife3k.x1n2onr6";
@@ -35,14 +38,14 @@ export const scrapeUsersFromAccount = async ({
 }) => {
   page.setDefaultTimeout(0);
 
-  await logIntoInstagram({ page });
+  await login({ page, platform: "instagram" });
 
   await page.goto(`https://www.instagram.com/${accountToScrape}/`);
 
   const notFound = await areWeOnDoesntExistPage(page);
-  if(notFound) {
+  if (notFound) {
     return log("Account not found");
-  };
+  }
 
   let moreToLoad = true;
   const timeout = 10 * 3000;
@@ -61,12 +64,9 @@ export const scrapeUsersFromAccount = async ({
     iteration++;
     log("\n \n Starting iteration nr ", iteration);
 
-    const usersPromise = page.waitForResponse(
-      `**/${extractionType}/?count**`,
-      {
-        timeout,
-      }
-    );
+    const usersPromise = page.waitForResponse(`**/${extractionType}/?count**`, {
+      timeout,
+    });
     const statusesPromise = page.waitForResponse("**/show_many/", {
       timeout,
     });
@@ -91,8 +91,14 @@ export const scrapeUsersFromAccount = async ({
     // saveUsersLocally(users);
     // saveStatusesLocally(statuses);
 
-    usersUpdated += (await saveUsersInDb(followers.users, accountToScrape)) || 0;
-    statusesUpdated += (await saveStatusesInDb(followingStatuses, accountToScrape, extractionType)) || 0;
+    usersUpdated +=
+      (await saveUsersInDb(followers.users, accountToScrape)) || 0;
+    statusesUpdated +=
+      (await saveStatusesInDb(
+        followingStatuses,
+        accountToScrape,
+        extractionType
+      )) || 0;
     log(`So far ${usersUpdated} users and ${statusesUpdated} statuses updated`);
 
     //make sure we don't do too many requests too fast

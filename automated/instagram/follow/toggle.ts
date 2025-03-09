@@ -1,7 +1,7 @@
 import { Page, test } from "@playwright/test";
 import {
   areWeOnDoesntExistPage,
-  logIntoInstagram,
+  login,
 } from "automated/instagram/instagram-utils";
 import {
   getFollowedToday,
@@ -29,7 +29,7 @@ const MIN_FOLLOWERS_TO_FOLLOWING_RATIO = 0.5;
 const IMAGE_SELECTOR = "._aagw";
 
 export const followInstagramUsers = async ({ page }: { page: Page }) => {
-  await logIntoInstagram({ page });
+  await login({ page, platform: "instagram" });
 
   let followedTodaySoFar = (await getFollowedToday()) || 0;
   log("Followed today so far: ", followedTodaySoFar);
