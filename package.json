@@ -6,7 +6,7 @@
     "start": "npm run docker-up && npm run open-cmd-menu",
     "open-cmd-menu": "tsx cmd.ts",
     "docker-up": "docker-compose up -d",
-    "update-db-with-drizzle-schema": "npx drizzle-kit push",
+    "update-db-with-drizzle-schema": "npx drizzle-kit push --config ./drizzle.config.ts",
     "insert-users": "tsx ./scripts/insertFromResults/users.ts",
     "insert-statuses": "tsx ./scripts/insertFromResults/statuses.ts"
   },
@@ -27,7 +27,7 @@
     "@playwright/test": "^1.46.1",
     "@types/node": "^22.5.0",
     "@types/pg": "^8.11.11",
-    "drizzle-kit": "^0.30.4",
+    "drizzle-kit": "^0.30.5",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.2",
     "typescript": "^5.5.4"

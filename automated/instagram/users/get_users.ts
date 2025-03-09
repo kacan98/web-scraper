@@ -1,19 +1,16 @@
-import { Page, test } from "@playwright/test";
+import { Page } from "@playwright/test";
+import { areWeOnDoesntExistPage, logIntoInstagram } from "automated/instagram/instagram-utils";
 import { insertUsers } from "automated/instagram/users/users.db";
 import { insertStatuses } from "automated/instagram/users/userStatuses.db";
 import dotenv from "dotenv";
-import fs from "fs";
-import path from "path";
-import { getInstagramCookies } from "scripts/ig-login";
 import { saveInFile, sleepApprox } from "src/utils";
 import { log } from "../../../src/utils";
 import {
   Followers,
-  IGStatuses,
   IGFollowingStatus,
+  IGStatuses,
   IGUser,
 } from "./get_users.model";
-import { areWeOnDoesntExistPage, logIntoInstagram } from "automated/instagram/instagram-utils";
 
 dotenv.config();
 

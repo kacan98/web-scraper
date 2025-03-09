@@ -1,7 +1,10 @@
 import { db } from "db";
 import { eq, sql } from "drizzle-orm";
 import { errorLog, log } from "src/utils";
-import { IGStatusesTableType, igUserStatusesTable } from "../../../db/schema";
+import {
+  IGStatusesTableType,
+  igUserStatusesTable,
+} from "../../../db/schema/instagram/ig.schema";
 
 export const insertStatuses = async (statuses: IGStatusesTableType[]) => {
   if (statuses.length === 0) {

@@ -1,10 +1,10 @@
 import { sql } from "drizzle-orm";
-import { check, unique } from "drizzle-orm/pg-core";
-import { PgColumn, pgEnum, text, varchar } from "drizzle-orm/pg-core";
-import { integer, pgTable, boolean } from "drizzle-orm/pg-core";
+import { boolean, check, integer, pgEnum, pgSchema, text, unique, varchar } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm/relations";
 
 if (!process.env.IG_LOGIN) throw new Error("IG_LOGIN not set");
+
+export const instagramSchema = pgSchema("instagram");
 
 export const userRoleEnum = pgEnum("scrapedFrom_type", [
   "user",
@@ -12,7 +12,7 @@ export const userRoleEnum = pgEnum("scrapedFrom_type", [
   "location",
 ]);
 
-export const igUserTable = pgTable("ig_users", {
+export const igUserTable = instagramSchema.table("ig_users", {
   id: varchar().primaryKey(),
   username: varchar({ length: 255 }).unique(),
   full_name: varchar({ length: 255 }),
@@ -45,7 +45,7 @@ export const scrapedOriginRelation = relations(igUserTable, ({ one }) => ({
   }),
 }));
 
-export const igUserStatusesTable = pgTable(
+export const igUserStatusesTable = instagramSchema.table(
   "ig_user_statuses",
   {
     //oficial IG fields:
@@ -62,7 +62,7 @@ export const igUserStatusesTable = pgTable(
     me: varchar().notNull().default(process.env.IG_LOGIN),
     follower: boolean(),
     i_followed_in_the_past: boolean(),
-    notWorthFollowing: boolean()
+    notWorthFollowing: boolean(),
   },
   (t) => [unique("combination of me and id").on(t.me, t.id)]
 );
@@ -76,7 +76,7 @@ export const userStatusRelation = relations(igUserStatusesTable, ({ one }) => ({
   }),
 }));
 
-export const numberFollowedTodayTable = pgTable(
+export const numberFollowedTodayTable = instagramSchema.table(
   "number_followed_today",
   {
     id: varchar({ length: 10 }).primaryKey(), //date in format YYYY-MM-DD

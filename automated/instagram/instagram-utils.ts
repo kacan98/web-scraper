@@ -1,5 +1,5 @@
 import { Page } from "playwright";
-import { getInstagramCookies } from "scripts/ig-login";
+import { getInstagramCookies } from "automated/instagram/ig-login";
 
 export const logIntoInstagram = async ({ page }: { page: Page }) => {
   const cookies = await getInstagramCookies();

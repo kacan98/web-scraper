@@ -2,7 +2,11 @@ import { db } from "db";
 import { and, eq, isNull, or } from "drizzle-orm";
 import { log } from "src/utils";
 import { PartialExcept } from "src/utils.model";
-import { igUserStatusesTable, igUserTable, IgUserTableType } from "../../../db/schema";
+import {
+  igUserStatusesTable,
+  igUserTable,
+  IgUserTableType,
+} from "../../../db/schema/instagram/ig.schema";
 
 export const insertUser = async (user: IgUserTableType) => {
   const userInsert: typeof igUserTable.$inferInsert = {
