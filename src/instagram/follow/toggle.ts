@@ -2,22 +2,23 @@ import { Page, test } from "@playwright/test";
 import {
   areWeOnDoesntExistPage,
   login,
-} from "automated/instagram/instagram-utils";
+} from "src/instagram/instagram-utils";
 import {
   getFollowedToday,
   incrementFollowedToday,
-} from "automated/instagram/follow/followed_today.db";
+} from "src/instagram/follow/followed_today.db";
 import {
   getUsers,
   removeUser,
   updateUser,
-} from "automated/instagram/users/users.db";
+} from "src/instagram/users/users.db";
 import {
   markAsNotworthFollowing,
   setFollowing,
-} from "automated/instagram/users/userStatuses.db";
+} from "src/instagram/users/userStatuses.db";
 import dotenv from "dotenv";
-import { errorLog, flipACoin, log, randomInt, sleepApprox } from "src/utils";
+import { flipACoin, log, randomInt, sleepApprox } from "src/utils";
+import { errorLog } from "src/local-file-saving";
 
 dotenv.config();
 

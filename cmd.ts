@@ -1,5 +1,5 @@
-import { openInstagramCmdMenu } from "automated/instagram/instagram-cmd";
-import { openLinkedinCmdMenu } from "automated/linkedin/linkedin-cmd";
+import { openInstagramCmdMenu } from "src/instagram/instagram-cmd";
+import { openLinkedinCmdMenu } from "src/linkedin/linkedin-cmd";
 import inquirer from "inquirer";
 
 enum MainMenuActions {

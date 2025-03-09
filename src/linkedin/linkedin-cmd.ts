@@ -1,4 +1,7 @@
 import inquirer from "inquirer";
+import { getJobsLinkedin } from "./jobs/get";
+import { Page } from "playwright";
+import { openPage } from "src/utils";
 
 enum LinkedinMenuActions {
   SCRAPE = "Scrape",
@@ -16,9 +19,11 @@ export const openLinkedinCmdMenu = async () => {
     },
   ]);
 
+  let page: Page;
   switch (action) {
     case LinkedinMenuActions.SCRAPE:
-      console.log("Scraping Linkedin");
+      page = await openPage();
+      getJobsLinkedin(page);
       break;
   }
 };

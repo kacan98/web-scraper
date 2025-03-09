@@ -1,5 +1,5 @@
 import test, { Page } from "@playwright/test";
-import { login } from "automated/instagram/instagram-utils";
+import { login } from "src/instagram/instagram-utils";
 import { platform } from "os";
 import { waitForever } from "src/utils";
 

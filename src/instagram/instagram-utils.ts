@@ -1,5 +1,5 @@
 import { Page } from "playwright";
-import { getCookies, ScrapingPlatform } from "automated/instagram/ig-login";
+import { getCookies, ScrapingPlatform } from "src/instagram/ig-login";
 
 export const login = async ({
   page,

@@ -1,7 +1,8 @@
-import { followInstagramUsers } from "automated/instagram/follow/toggle";
-import { ExtractionType, scrapeUsersFromAccount } from "automated/instagram/users/get_users";
+import { followInstagramUsers } from "src/instagram/follow/toggle";
+import { ExtractionType, scrapeUsersFromAccount } from "src/instagram/users/get_users";
 import inquirer from "inquirer";
-import { chromium, Page } from "playwright";
+import { Page } from "playwright";
+import { openPage } from "src/utils";
 
 
 enum InstagramMainMenuActions {
@@ -13,12 +14,6 @@ enum InstagramMainMenuActions {
   UNFOLLOW_USERS = "Unfollow users",
   BACK = "Back to main menu",
 }
-
-const openPage = async (): Promise<Page> => {
-  const browser = await chromium.launch({ headless: false });
-  const page = await browser.newPage();
-  return page;
-};
 
 const askWhichAccountToScrape = async (): Promise<string> => {
   return inquirer

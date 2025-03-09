@@ -2,18 +2,19 @@ import { Page } from "@playwright/test";
 import {
   areWeOnDoesntExistPage,
   login,
-} from "automated/instagram/instagram-utils";
-import { insertUsers } from "automated/instagram/users/users.db";
-import { insertStatuses } from "automated/instagram/users/userStatuses.db";
+} from "src/instagram/instagram-utils";
+import { insertUsers } from "src/instagram/users/users.db";
+import { insertStatuses } from "src/instagram/users/userStatuses.db";
 import dotenv from "dotenv";
-import { saveInFile, sleepApprox } from "src/utils";
-import { log } from "../../../src/utils";
+import { sleepApprox } from "src/utils";
+import { log } from "../../utils";
 import {
   Followers,
   IGFollowingStatus,
   IGStatuses,
   IGUser,
 } from "./get_users.model";
+import { saveInFile } from "src/local-file-saving";
 
 dotenv.config();
 
