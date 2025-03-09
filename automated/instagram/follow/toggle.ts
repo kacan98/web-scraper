@@ -1,17 +1,15 @@
 import { Page, test } from "@playwright/test";
+import {
+  areWeOnDoesntExistPage,
+  logIntoInstagram,
+} from "automated/instagram/instagram-utils";
 import { getFollowedToday, incrementFollowedToday } from "db/followed_today";
-import { getUsers, updateUser, removeUser } from "db/users";
+import { getUsers, removeUser, updateUser } from "db/users";
 import { markAsNotworthFollowing, setFollowing } from "db/userStatuses";
 import dotenv from "dotenv";
-import fs from "fs";
-import path, { dirname } from "path";
-import { login } from "scripts/ig-login";
 import { errorLog, flipACoin, log, randomInt, sleepApprox } from "src/utils";
-import { fileURLToPath } from "url";
 
 dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
 
 const MAX_USERS_TO_FOLLOW = 50;
 const MIN_FOLLOWERS = 30;
@@ -20,20 +18,9 @@ const MIN_FOLLOWERS_TO_FOLLOWING_RATIO = 0.5;
 
 const IMAGE_SELECTOR = "._aagw";
 
-const cookiesPath = path.join("cookies.json");
+export const followInstagramUsers = async ({ page }: { page: Page }) => {
+  await logIntoInstagram({ page });
 
-test.beforeAll(async () => {
-  if (!process.env.IG_LOGIN) throw new Error("IG_LOGIN not set");
-
-  await login();
-});
-
-test.beforeEach(async ({ page }) => {
-  const cookies = JSON.parse(fs.readFileSync(cookiesPath, "utf8"));
-  await page.context().addCookies(cookies);
-});
-
-test.only("follow or unfollow", async ({ page }) => {
   let followedTodaySoFar = (await getFollowedToday()) || 0;
   log("Followed today so far: ", followedTodaySoFar);
 
@@ -49,14 +36,13 @@ test.only("follow or unfollow", async ({ page }) => {
   );
 
   // errorLog(new Error("This is a test"));
-  test.setTimeout(0);
+  page.setDefaultTimeout(0);
 
   log("Getting users to follow...");
   const users = await getUsers({
     top: (MAX_USERS_TO_FOLLOW - followedTodaySoFar) * 3, // get more users than needed
   });
   log("Found ", users.length, " users!");
-  log("Starting to follow...");
 
   for (const user of users) {
     if (followedTodaySoFar >= MAX_USERS_TO_FOLLOW) {
@@ -67,32 +53,34 @@ test.only("follow or unfollow", async ({ page }) => {
     log("\n \nGoing to ", user.username);
     try {
       await page.goto(`https://www.instagram.com/${user.username}/`, {
-        timeout: 10000,
+        timeout: 15000,
       });
     } catch (e) {
       errorLog(e, "Failed to go to ", user.username);
+      await markAsNotworthFollowing(user.id, user.username);
       continue;
     }
+
     log("Still need to follow ", MAX_USERS_TO_FOLLOW - followedTodaySoFar);
 
     await sleepApprox(page, 5000);
 
-    //"this page isn't available" will display if the user is not found
-    const notFound = await page.isVisible("text=This page isn't available.");
+    const notFound = await areWeOnDoesntExistPage(page);
     if (notFound) {
       log("User not found");
       removeUser(user.id, user.username);
       continue;
     }
 
-    log("Getting stats");
-    const { followers, following, posts } = await getStats(page);
+    log("Getting profile stats");
+    const { followers, following, posts } = await getProfileStats(page);
     await updateUser({
       id: user.id,
       followers,
       following,
       posts,
     });
+
     log("Stats for ", user.username, " are: ", { followers, following, posts });
 
     let followable =
@@ -145,9 +133,11 @@ test.only("follow or unfollow", async ({ page }) => {
 
     await sleepApprox(page, 3000);
   }
-});
 
-const getStats = async (
+  log("Done");
+};
+
+const getProfileStats = async (
   page: Page
 ): Promise<{
   followers?: number;
@@ -213,7 +203,8 @@ const likeSomePosts = async (
 
   //click the first image
   try {
-    await page.click(IMAGE_SELECTOR);
+    //make sure it fails when the profile is private
+    await page.click(IMAGE_SELECTOR, { timeout: 8000 });
   } catch (e) {
     errorLog(
       "Failed to click image - This is probably because the image selector is not working anymore. Should be the first image so that we open the modal"

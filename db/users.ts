@@ -1,10 +1,8 @@
 import { db } from "db";
-import { SQL, eq, getTableColumns, sql, and, not } from "drizzle-orm";
-import { PgTable } from "drizzle-orm/pg-core";
-import { SQLiteTable } from "drizzle-orm/sqlite-core";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { log } from "src/utils";
-import { igUserStatusesTable, igUserTable, IgUserTableType } from "./schema";
 import { PartialExcept } from "src/utils.model";
+import { igUserStatusesTable, igUserTable, IgUserTableType } from "./schema";
 
 export const insertUser = async (user: IgUserTableType) => {
   const userInsert: typeof igUserTable.$inferInsert = {
@@ -43,7 +41,10 @@ export const insertUsers = async (users: IgUserTableType[]) => {
     .insert(igUserTable)
     .values(usersInsert)
     .onConflictDoNothing();
-  log("inserted users", res.rowCount);
+
+  log("updated users", res.rowCount);
+
+  return res.rowCount;
 };
 
 export const getUsers = async ({
@@ -68,9 +69,12 @@ export const getUsers = async ({
       and(
         onlyPublic ? eq(igUserStatusesTable.is_private, false) : undefined,
         eq(igUserStatusesTable.following, isFollowing),
-        // removeThoseThatAreNotWorthFollowing
-        //   ? not(eq(igUserStatusesTable.notWorthFollowing, true))
-        //   : undefined
+        removeThoseThatAreNotWorthFollowing
+          ? or(
+              eq(igUserStatusesTable.notWorthFollowing, false),
+              isNull(igUserStatusesTable.notWorthFollowing)
+            )
+          : undefined
       )
     );
 

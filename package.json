@@ -3,11 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "npm run docker-up-and-get_users",
+    "start": "npm run docker-up && npm run open-cmd-menu",
+    "open-cmd-menu": "tsx cmd.ts",
     "docker-up": "docker-compose up -d",
-    "get-users": "npx playwright test automated/get_users.spec.ts",
-    "follow-users": "npx playwright test automated/follow/toggle.spec.ts",
-    "docker-up-and-get_users": "npm run docker-up && npm run get_users",
     "update-db-with-drizzle-schema": "npx drizzle-kit push",
     "insert-users": "tsx ./scripts/insertFromResults/users.ts",
     "insert-statuses": "tsx ./scripts/insertFromResults/statuses.ts"
@@ -19,6 +17,7 @@
   "dependencies": {
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.39.2",
+    "inquirer": "^12.4.3",
     "mongodb": "^6.8.0",
     "mongoose": "^8.5.4",
     "pg": "^8.13.1",

@@ -1,9 +1,10 @@
 import fs from "fs";
 import path from "path";
 import { insertStatuses } from "../../db/userStatuses";
-import { FollowingStatuses } from "../../automated/get_users.spec.ts/get_users.model";
+import { IGStatuses } from "../../automated/instagram/users/get_users.model";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import { IGStatusesTableType } from "db/schema";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -19,11 +20,20 @@ const resultsDir = process.env.RESULTS_DIR || "./results";
 const userStatusesPath = path.join(resultsDir, statusesFileName);
 
 const insertStatusesFromResults = async () => {
-  const statuses: FollowingStatuses["friendship_statuses"] = JSON.parse(
+  const statuses: IGStatuses["friendship_statuses"] = JSON.parse(
     fs.readFileSync(userStatusesPath, "utf8")
   );
 
-  insertStatuses(statuses);
+  insertStatuses(getInsertableStatuses(statuses));
+};
+
+const getInsertableStatuses = (
+  igStatuses: IGStatuses["friendship_statuses"]
+): IGStatusesTableType[] => {
+  return Object.entries(igStatuses).map(([userId, status]) => ({
+    id: userId,
+    ...status,
+  }));
 };
 
 const fileNames = fs
@@ -32,10 +42,10 @@ const fileNames = fs
 
 const insertAllStatusesFromResults = async () => {
   fileNames.forEach((fileName) => {
-    const statuses: FollowingStatuses["friendship_statuses"] = JSON.parse(
+    const statuses: IGStatuses["friendship_statuses"] = JSON.parse(
       fs.readFileSync(path.join(resultsDir, fileName), "utf8")
     );
 
-    insertStatuses(statuses);
+    insertStatuses(getInsertableStatuses(statuses));
   });
 };

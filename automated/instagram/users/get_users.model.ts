@@ -1,4 +1,4 @@
-export interface FollowingStatuses {
+export interface IGStatuses {
   friendship_statuses: {
     [userId: IGUser["id"]]: IGFollowingStatus;
   };

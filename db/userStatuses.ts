@@ -1,30 +1,33 @@
 import { db } from "db";
-import { log } from "src/utils";
-import { FollowingStatuses } from "automated/get_users.spec.ts/get_users.model";
-import { igUserStatusesTable } from "./schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import { errorLog, log } from "src/utils";
+import { IGStatusesTableType, igUserStatusesTable } from "./schema";
 
-export const insertStatuses = async (
-  statuses: FollowingStatuses["friendship_statuses"]
-) => {
-  if (statuses.friendship_statuses) {
-    throw new Error(
-      "This probably happens because you're sending the whole object instead of just the statuses"
-    );
+export const insertStatuses = async (statuses: IGStatusesTableType[]) => {
+  if (statuses.length === 0) {
+    errorLog("No statuses to insert");
+    return;
   }
 
-  const statusesInsert: (typeof igUserStatusesTable.$inferInsert)[] =
-    Object.entries(statuses).map(([userId, status]) => ({
-      id: userId,
-      ...status,
-    }));
+  const updateFields = Object.keys(statuses[0]).filter((key) => key !== "id");
 
   const res = await db
     .insert(igUserStatusesTable)
-    .values(statusesInsert)
-    .onConflictDoNothing()
+    .values(statuses)
+    .onConflictDoUpdate({
+      target: igUserStatusesTable.id,
+      set: Object.fromEntries(
+        updateFields.map((field) => [
+          field,
+          sql`excluded.${sql.identifier(field)}`, // Properly escape column names
+        ])
+      ),
+    })
     .execute();
-  log("inserted statuses", res.rowCount);
+
+  log("updated statuses", res.rowCount);
+
+  return res.rowCount;
 };
 
 export const setFollowing = async ({

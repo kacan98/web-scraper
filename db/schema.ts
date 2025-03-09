@@ -67,6 +67,8 @@ export const igUserStatusesTable = pgTable(
   (t) => [unique("combination of me and id").on(t.me, t.id)]
 );
 
+export type IGStatusesTableType = typeof igUserStatusesTable.$inferInsert;
+
 export const userStatusRelation = relations(igUserStatusesTable, ({ one }) => ({
   statusUserRelation: one(igUserTable, {
     fields: [igUserStatusesTable.id],
