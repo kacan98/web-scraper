@@ -1,5 +1,5 @@
 import { db } from "db"
-import { numberFollowedTodayTable } from "../../../db/schema/instagram/ig.schema";
+import { numberFollowedTodayTable } from "../../../db/schema/instagram/ig-schema";
 import { eq, sql,and } from "drizzle-orm"
 
 

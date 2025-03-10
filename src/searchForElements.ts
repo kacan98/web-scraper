@@ -81,7 +81,7 @@ export async function extractText(
 ): Promise<string | undefined> {
   if (!locator) {
     if (errorWhenNotFound) {
-      throw new Error("Locator is not defined");
+      throw new Error(`Locator ${locator} is not defined`);
     }
     return undefined;
   }

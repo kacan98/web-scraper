@@ -7,6 +7,7 @@ import {
   tryToFindElementsFromSelectors,
 } from "src/searchForElements";
 import { waitForever } from "src/utils";
+import { saveLinkedinJobInDb } from "./jobs.db";
 
 export interface LinkedinJob {
   title: string;
@@ -70,7 +71,7 @@ export const getJobsLinkedin = async (
         await page.waitForTimeout(1750); // wait for the job details to load
 
         const job = await extractJob(page);
-        jobs.push(job);
+        saveLinkedinJobInDb(job);
 
         await waitForever();
 

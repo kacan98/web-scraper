@@ -4,7 +4,7 @@ import { log } from "src/utils";
 import {
   IGStatusesTableType,
   igUserStatusesTable,
-} from "../../../db/schema/instagram/ig.schema";
+} from "../../../db/schema/instagram/ig-schema";
 import { errorLog } from "src/local-file-saving";
 
 export const insertStatuses = async (statuses: IGStatusesTableType[]) => {

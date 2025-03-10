@@ -89,3 +89,17 @@ export const numberFollowedTodayTable = instagramSchema.table(
     check("date_format", sql`${t.id} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'`),
   ]
 );
+
+
+export const linkedinSchema = pgSchema("linkedin");
+
+export const jobPostsTable = linkedinSchema.table("job_posts", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  title: varchar({ length: 255 }).notNull(),
+  company: varchar({ length: 255 }).notNull(),
+  location: varchar({ length: 255 }).notNull(),
+  jobDetails: text().notNull(),
+  skills: text().notNull(),
+  linkedinId: varchar({ length: 255 }).notNull().unique(),
+  somethingElse: text(),
+});

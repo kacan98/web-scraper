@@ -6,7 +6,7 @@ import {
   igUserStatusesTable,
   igUserTable,
   IgUserTableType,
-} from "../../../db/schema/instagram/ig.schema";
+} from "../../../db/schema/instagram/ig-schema";
 
 export const insertUser = async (user: IgUserTableType) => {
   const userInsert: typeof igUserTable.$inferInsert = {
