@@ -23,7 +23,7 @@ export const incrementFollowedToday = async () => {
     })
 }
 
-export const getFollowedToday = async () => {
+export const getFollowedToday = async (): Promise<number> => {
     if (!process.env.IG_LOGIN) throw new Error("IG_LOGIN not set");
 
     const nr = await db
@@ -36,5 +36,5 @@ export const getFollowedToday = async () => {
         eq(numberFollowedTodayTable.me, process.env.IG_LOGIN),
     ))
 
-    return nr[0]?.nr
+    return nr[0]?.nr || 0
 }

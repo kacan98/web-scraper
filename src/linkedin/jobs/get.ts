@@ -1,10 +1,7 @@
-import test, { Page } from "@playwright/test";
+import { Page } from "@playwright/test";
+import { log } from "console";
 import { login } from "src/instagram/instagram-utils";
-import { platform } from "os";
 import { waitForever } from "src/utils";
-
-const JOB_DESCRIPTION = "Angular";
-const LOCATION = "Berlin";
 
 export interface LinkedinJob {
   title: string;
@@ -17,20 +14,39 @@ export interface LinkedinJob {
 
 const ONE_HOUR = 60 * 60 * 1000;
 
-export const getJobsLinkedin = async (page: Page) => {
-  test.setTimeout(ONE_HOUR);
-
-  await login({ page, platform: "linkedin" });
+export const getJobsLinkedin = async (
+  page: Page,
+  {
+    jobDescription,
+    location,
+    shouldLogin = false,
+  }: {
+    jobDescription: string;
+    location: string;
+    shouldLogin?: boolean;
+  }
+) => {
+  page.setDefaultTimeout(ONE_HOUR);
+  if (shouldLogin) {
+    await login({ page, platform: "linkedin" }); // Not needed to search for jobs
+  } else {
+    //dismiss prompt to log in
+    //aria-label="Dismiss"
+    const dismissButton = await page.$("button[aria-label='Dismiss']");
+    if (dismissButton) {
+      await dismissButton.click();
+    }
+  }
 
   await page.goto(`https://www.linkedin.com/jobs/search/`);
 
-  await search(page);
+  await search(page, jobDescription, location);
 
   await page.waitForTimeout(3000);
 
   // Make sure that all jobs are loaded
-  const paginationListSelector = ".artdeco-pagination__pages";
-  await page.locator(paginationListSelector).scrollIntoViewIfNeeded();
+  // const paginationListSelector = ".artdeco-pagination__pages";
+  // await page.locator(paginationListSelector).scrollIntoViewIfNeeded();
 
   // Check if the selectors are still valid
   //testLinkedinJobSelectors(page);
@@ -59,7 +75,7 @@ export const getJobsLinkedin = async (page: Page) => {
         }
 
         // Save the jobs to a file
-        console.log('This is the job that I found: ', job);
+        console.log("This is the job that I found: ", job);
       }
     }
 
@@ -74,11 +90,12 @@ export const getJobsLinkedin = async (page: Page) => {
       jobItems = await page.$$("li[data-occludable-job-id]");
       currentPage++;
     } else {
+      console.log("No more pages found");
       break; // No more pages
     }
   }
 
-  await waitForever();
+  log("Done. Found jobs: ", jobs.length);
 };
 
 const extractJob = async (page: Page): Promise<LinkedinJob> => {
@@ -121,11 +138,11 @@ export const linkedinJobSelectors: { [key: string]: string } = {
   skills: ".job-details-how-you-match__skills-section-descriptive-skill",
 };
 
-async function search(page: Page) {
+async function search(page: Page, jobDescription: string, location: string) {
   await page.fill(
     "input[aria-label='Search by title, skill, or company']",
-    JOB_DESCRIPTION
+    jobDescription
   );
-  await page.fill("input[aria-label='City, state, or zip code']", LOCATION);
+  await page.fill("input[aria-label='City, state, or zip code']", location);
   await page.click("button.jobs-search-box__submit-button");
 }

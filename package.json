@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "npm run docker-up && npm run open-cmd-menu",
-    "open-cmd-menu": "tsx cmd.ts",
+    "start": "npm run docker-up && tsx cmd.ts",
+    "faster-less-safe-start": "tsx cmd.ts",
+    "help": "npm run faster-less-safe-start -- --help",
+    "open-cmd-menu": "",
     "docker-up": "docker-compose up -d",
     "update-db-with-drizzle-schema": "npx drizzle-kit push --config ./drizzle.config.ts",
     "insert-users": "tsx ./scripts/insertFromResults/users.ts",
@@ -15,13 +17,15 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@types/yargs": "^17.0.33",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.39.2",
     "inquirer": "^12.4.3",
     "mongodb": "^6.8.0",
     "mongoose": "^8.5.4",
     "pg": "^8.13.1",
-    "playwright": "^1.46.1"
+    "playwright": "^1.46.1",
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.46.1",
