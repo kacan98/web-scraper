@@ -64,5 +64,6 @@ export const openLinkedinCmdMenu = async () => {
   getJobsLinkedin(page, {
     jobDescription: job,
     location,
+    shouldLogin: true,
   });
 };

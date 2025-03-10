@@ -8,10 +8,15 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const username = process.env.IG_LOGIN;
-const password = process.env.IG_PASSWORD;
-if (!username || !password)
+const IG_LOGIN = process.env.IG_LOGIN;
+const IG_PASSWORD = process.env.IG_PASSWORD;
+if (!IG_LOGIN || !IG_PASSWORD)
   throw new Error("IG_USERNAME or IG_PASSWORD not set");
+
+const LINKEDIN_LOGIN = process.env.LINKEDIN_LOGIN;
+const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD;
+if (!LINKEDIN_LOGIN || !LINKEDIN_PASSWORD)
+  throw new Error("LINKEDIN_USERNAME or LINKEDIN_PASSWORD not set");
 
 export type ScrapingPlatform = keyof typeof platformSpecifics;
 
@@ -25,6 +30,8 @@ const platformSpecifics = {
       password: 'input[name="password"]',
       afterLoginConfirm: "nav",
     },
+    password: IG_PASSWORD,
+    username: IG_LOGIN,
   },
   linkedin: {
     pathToCookies: "../linkedin-cookies.json",
@@ -36,6 +43,8 @@ const platformSpecifics = {
       password: 'input[id="password"]',
       afterLoginConfirm: 'strong:has-text("Start a post")',
     },
+    password: LINKEDIN_PASSWORD,
+    username: LINKEDIN_LOGIN,
   },
 };
 
@@ -89,7 +98,7 @@ const logIntoInstagramManually = async ({
 
   await page.goto(platformDetails.loginUrl);
 
-  console.log("Please log in manually...");
+  console.log("Trying to log in manually...");
 
   const {
     username: usernameSelector,
@@ -100,8 +109,8 @@ const logIntoInstagramManually = async ({
   await page.click(afterNavigateButton);
 
   //fill in the username and password
-  await page.fill(usernameSelector, username);
-  await page.fill(passwordSelector, password);
+  await page.fill(usernameSelector, platformDetails.username);
+  await page.fill(passwordSelector, platformDetails.password);
 
   await page.click('button[type="submit"]');
 

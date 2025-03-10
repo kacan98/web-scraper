@@ -1,6 +1,11 @@
-import { Page } from "@playwright/test";
+import { Locator, Page } from "@playwright/test";
 import { log } from "console";
 import { login } from "src/instagram/instagram-utils";
+import {
+  extractText,
+  tryToFindElementFromSelectors,
+  tryToFindElementsFromSelectors,
+} from "src/searchForElements";
 import { waitForever } from "src/utils";
 
 export interface LinkedinJob {
@@ -51,27 +56,27 @@ export const getJobsLinkedin = async (
   // Check if the selectors are still valid
   //testLinkedinJobSelectors(page);
 
-  let jobItems = await page.$$("li[data-occludable-job-id]");
+  let jobItems = page.locator('a[href*="/jobs/view/"]');
   const jobs: LinkedinJob[] = [];
   let currentPage = 1;
 
-  while (jobItems.length > 0) {
-    for (let i = 0; i < jobItems.length; i++) {
-      const jobItem = jobItems[i];
-      const jobLink = await jobItem.$('a[href*="/jobs/view/"]');
+  let jobsToProcess = await jobItems.all();
+  while (jobsToProcess.length > 0) {
+    for (let i = 0; i < jobsToProcess.length; i++) {
+      const jobItem = jobsToProcess[i];
 
-      waitForever();
-
-      if (jobLink) {
-        await jobLink.click();
+      if (jobItem) {
+        await jobItem.click();
         await page.waitForTimeout(1750); // wait for the job details to load
 
         const job = await extractJob(page);
         jobs.push(job);
 
+        await waitForever();
+
         // Refresh the list of job items every 5 iterations
         if ((i + 1) % 5 === 0) {
-          jobItems = await page.$$("li[data-occludable-job-id]");
+          jobsToProcess = await jobItems.all();
         }
 
         // Save the jobs to a file
@@ -87,7 +92,7 @@ export const getJobsLinkedin = async (
     if (nextPageButton) {
       await nextPageButton.click();
       await page.waitForTimeout(3000); // wait for the next page to load
-      jobItems = await page.$$("li[data-occludable-job-id]");
+      jobsToProcess = await jobItems.all();
       currentPage++;
     } else {
       console.log("No more pages found");
@@ -98,51 +103,95 @@ export const getJobsLinkedin = async (
   log("Done. Found jobs: ", jobs.length);
 };
 
+const waitForAtLeastOneSelector = async (page: Page, selectors: string[]) => {
+  const elements = await tryToFindElementFromSelectors(page, selectors);
+  if (!elements) {
+    throw new Error("No elements found");
+  }
+
+  await elements.waitFor({ state: "visible" });
+};
+
 const extractJob = async (page: Page): Promise<LinkedinJob> => {
   //wait until h1 is visible
-  await page.waitForSelector(linkedinJobSelectors.jobTitle);
-
-  return page.evaluate(
-    ({ selectors }) => {
-      function extractText(selector: string): string {
-        const extracted = document.querySelector(selector);
-        return extracted?.textContent?.trim() || "";
-      }
-
-      const url = window.location.href;
-      const urlParams = new URLSearchParams(new URL(url).search);
-      const jobId = urlParams.get("currentJobId") || "";
-
-      const job: LinkedinJob = {
-        title: extractText(selectors.jobTitle),
-        company: extractText(selectors.company),
-        location: extractText(selectors.location),
-        jobDetails: extractText(selectors.jobDetails),
-        skills: extractText(selectors.skills),
-        id: jobId,
-      };
-
-      console.log(job);
-
-      return job;
-    },
-    { selectors: linkedinJobSelectors }
+  await waitForAtLeastOneSelector(
+    page,
+    linkedinJobSelectors.jobDetails.jobTitle
   );
+
+  const { jobTitle, company, location, jobDetails, skills } =
+    await tryToFindElementsFromSelectors(page, {
+      jobTitle: linkedinJobSelectors.jobDetails.jobTitle,
+      company: linkedinJobSelectors.jobDetails.company,
+      location: linkedinJobSelectors.jobDetails.jobLocation,
+      jobDetails: linkedinJobSelectors.jobDetails.jobDetails,
+      skills: linkedinJobSelectors.jobDetails.skills,
+    });
+
+  const url = page.url();
+  const urlParams = new URLSearchParams(new URL(url).search);
+  const jobId = urlParams.get("currentJobId") || "";
+
+  return {
+    title: await extractText(jobTitle),
+    company: await extractText(company),
+    location: await extractText(location),
+    jobDetails: await extractText(jobDetails),
+    skills: await extractText(skills),
+    id: jobId,
+  };
 };
 
-export const linkedinJobSelectors: { [key: string]: string } = {
-  jobTitle: "h1",
-  company: "div.job-details-jobs-unified-top-card__company-name",
-  location: ".job-details-jobs-unified-top-card__primary-description-container",
-  jobDetails: "#job-details",
-  skills: ".job-details-how-you-match__skills-section-descriptive-skill",
+//The thought here was that the seletors change all the time,
+// so we wanna store all of them and try to find at least one that works
+export const linkedinJobSelectors = {
+  searchInput: [
+    '[aria-label="Search by title, skill, or company"]',
+    'input[aria-label="Search job titles or companies"]',
+  ],
+  locationInput: ["input[aria-label='City, state, or zip code']"],
+  buttonSearch: ["button.jobs-search-box__submit-button"],
+  jobDetails: {
+    jobTitle: ["h1"],
+    company: ["div.job-details-jobs-unified-top-card__company-name"],
+    jobLocation: [
+      ".job-details-jobs-unified-top-card__primary-description-container",
+    ],
+    jobDetails: ["#job-details"],
+    skills: [".job-details-how-you-match__skills-section-descriptive-skill"],
+  },
 };
 
-async function search(page: Page, jobDescription: string, location: string) {
-  await page.fill(
-    "input[aria-label='Search by title, skill, or company']",
-    jobDescription
-  );
-  await page.fill("input[aria-label='City, state, or zip code']", location);
-  await page.click("button.jobs-search-box__submit-button");
+async function search(
+  page: Page,
+  _jobDescription: string,
+  _location: string,
+  loggedIn = true
+) {
+  if (loggedIn) {
+    const elements = await tryToFindElementsFromSelectors(
+      page,
+      {
+        searchInput: linkedinJobSelectors.searchInput,
+        searchButton: linkedinJobSelectors.buttonSearch,
+        locationInput: linkedinJobSelectors.locationInput,
+      },
+      true
+    );
+
+    if (!elements) throw new Error("Search elements not found");
+
+    const { searchInput, searchButton, locationInput } = elements;
+
+    await searchInput.fill(_jobDescription);
+    await locationInput.fill(_location);
+    await searchButton.click();
+  } else {
+    const jobDescription = encodeURIComponent(_jobDescription);
+    const location = encodeURIComponent(_location);
+    //go to https://www.linkedin.com/jobs/search?keywords=Angular&location=Stockholm&geoId=&trk=public_jobs_jobs-search-bar_search-submit&position=1&pageNum=0
+    await page.goto(
+      `https://www.linkedin.com/jobs/search?keywords=${jobDescription}&location=${location}&geoId=&trk=public_jobs_jobs-search-bar_search-submit&position=1&pageNum=0`
+    );
+  }
 }

@@ -9,8 +9,6 @@ enum MainMenuActions {
   EXIT = "Exit",
 }
 
-console.log(process.argv);
-
 const mainMenu = async () => {
   const argv = await yargs(process.argv.slice(2))
     .scriptName("Krels scraper")
