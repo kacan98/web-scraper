@@ -6,7 +6,7 @@ if (!process.env.IG_LOGIN) throw new Error("IG_LOGIN not set");
 
 export const instagramSchema = pgSchema("instagram");
 
-export const userRoleEnum = pgEnum("scrapedFrom_type", [
+export const userRoleEnum = instagramSchema.enum("scrapedFrom_type", [
   "user",
   "hashtag",
   "location",
@@ -31,7 +31,7 @@ export const igUserTable = instagramSchema.table("ig_users", {
   posts: integer(),
 
   scrapedFrom_full_name: varchar().notNull(),
-  scrapedFrom_type: userRoleEnum().notNull(),
+  scrapedFrom_type: userRoleEnum().notNull().default("user"),
 });
 
 //This is different from what we get from IG - because of some custom fields

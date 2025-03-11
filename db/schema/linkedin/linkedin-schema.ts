@@ -9,5 +9,5 @@ export const jobPostsTable = linkedinSchema.table("job_posts", {
   location: varchar({ length: 255 }).notNull(),
   jobDetails: text().notNull(),
   skills: text().notNull(),
-  linkedinId: varchar({ length: 255 }).notNull().unique()
+  linkedinId: varchar({ length: 255 }).notNull().unique(),
 });

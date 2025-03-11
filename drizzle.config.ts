@@ -6,6 +6,7 @@ export default defineConfig({
   out: "./drizzle",
   schema: "./db/schema/**/*.ts",
   dialect: "postgresql",
+  schemaFilter: ["instagram", "linkedin"],
   dbCredentials: {
     url: dbURL,
     port: +process.env.POSTGRES_OUTPUT_PORT!,
