@@ -7,11 +7,31 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-    # the reason I have it set to a different port is because I have a local postgres running on 5432
-    # and it was causing conflicts and weirdly NOT throwing an error when I ran docker-compose up with the same port!
+      # the reason I have it set to a different port is because I have a local postgres running on 5432
+      # and it was causing conflicts and weirdly NOT throwing an error when I ran docker-compose up with the same port!
       - "${POSTGRES_OUTPUT_PORT}:5432"
     volumes:
       - ./pgdata:/var/lib/postgresql/data
-
+  # I was playing around with local AI so Imma just park it here.
+  # This mostly worked, it just needs a model instaled in the ollama container
+  # Probably through a Dockerfile
+  # webui:
+  #   image: ghcr.io/open-webui/open-webui:main
+  #   ports:
+  #     - 8080:8080/tcp
+  #   environment:
+  #     - OLLAMA_BASE_URL=http://ollama:11434
+  #   volumes:
+  #     - /var/opt/data/ollama/webui:/app/backend/data
+  #   depends_on:
+  #     - ollama
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   ports:
+  #     - 11434:11434/tcp
+  #   command: >
+  #     bash -c "ollama "
+  #   volumes:
+  #     - /var/opt/data/ollama/ollama:/root/.ollama
 volumes:
   pgdata:
