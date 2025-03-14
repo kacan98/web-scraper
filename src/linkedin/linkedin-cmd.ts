@@ -1,8 +1,8 @@
 import inquirer from "inquirer";
-import { getJobsLinkedin } from "./jobs/get";
 import { Page } from "playwright";
 import { openPage } from "src/utils";
-import yargs, { string } from "yargs";
+import yargs from "yargs";
+import { getJobsLinkedin } from "./jobs/get";
 
 const options = {
   job: {
@@ -61,6 +61,10 @@ export const openLinkedinCmdMenu = async () => {
 
   let page: Page;
   page = await openPage();
+  // Don't need this. Never worked. Could be revived one day if I feel like it or need it.
+  // await captureAndSaveResponses(page, ScrapingSource.LinkedIn);
+  // await mockResponses(page, ScrapingSource.LinkedIn);
+  
   getJobsLinkedin(page, {
     jobDescription: job,
     location,

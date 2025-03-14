@@ -2,10 +2,11 @@ import { openInstagramCmdMenu } from "src/instagram/instagram-cmd";
 import { openLinkedinCmdMenu } from "src/linkedin/linkedin-cmd";
 import inquirer from "inquirer";
 import yargs from "yargs/yargs";
+import { ScrapingSource } from "model";
 
 enum MainMenuActions {
-  INSTAGRAM = "Instagram",
-  LINKEDIN = "LinkedIn",
+  INSTAGRAM = ScrapingSource.Instagram,
+  LINKEDIN = ScrapingSource.LinkedIn,
   EXIT = "Exit",
 }
 

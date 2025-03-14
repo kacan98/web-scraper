@@ -25,21 +25,29 @@ export async function tryToFindElementsFromSelectors<
 >(
   page: Page,
   selectors: T,
-  allOrNothing: true
+  options?: {
+    allOrNothing: true;
+  }
 ): Promise<{ [K in keyof T]: Locator } | undefined>;
 export async function tryToFindElementsFromSelectors<
   T extends Record<string, string[]>
 >(
   page: Page,
   selectors: T,
-  allOrNothing?: false
+  options?: {
+    allOrNothing?: false;
+  }
 ): Promise<Partial<{ [K in keyof T]: Locator | undefined }>>;
 export async function tryToFindElementsFromSelectors<
   T extends Record<string, string[]>
 >(
   page: Page,
   selectors: T,
-  allOrNothing = false
+  {
+    allOrNothing = false,
+  }: {
+    allOrNothing?: boolean;
+  } = {}
 ): Promise<Partial<{ [K in keyof T]: Locator | undefined }> | undefined> {
   const allOrNothingResults: Partial<{
     [K in keyof T]: Locator;
@@ -67,14 +75,14 @@ export async function tryToFindElementsFromSelectors<
   return allOrNothing ? allOrNothingResults : potentiallyPartialResults;
 }
 
-export async function extractText (
+export async function extractText(
   locator?: Locator,
-  errorWhenNotFound?: true 
-): Promise<string>
-export async function extractText (
+  errorWhenNotFound?: true
+): Promise<string>;
+export async function extractText(
   locator?: Locator,
-  errorWhenNotFound?: false 
-): Promise<string | undefined>
+  errorWhenNotFound?: false
+): Promise<string | undefined>;
 export async function extractText(
   locator?: Locator,
   errorWhenNotFound: boolean = true
@@ -86,5 +94,5 @@ export async function extractText(
     return undefined;
   }
 
-  return await locator.textContent() ?? undefined;
-};
+  return (await locator.textContent()) ?? undefined;
+}

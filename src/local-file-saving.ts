@@ -27,14 +27,70 @@ export const errorLog = (...args: any[]) => {
   saveInFile("errors", errorFileName, "json", errors);
 };
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const currentFilenameFriendlyDateTime = getFilenameFriendlyDateTime();
+export const getSaveInFileFcWithNameOfFile = (
+  pathFromRoot: string,
+  fileName: string,
+  fileExtension: string,
+  addDateToFileName = true
+): {
+  saveInFileFc: (data: any) => Promise<string>;
+  filePath: string;
+} => {
+  const filePath = getFileNameForFunctionSaveInFile(
+    pathFromRoot,
+    fileName,
+    fileExtension,
+    addDateToFileName
+  );
+
+  const saveInFileFc = (data: any)=> saveInFile.bind(
+    null,
+    pathFromRoot,
+    fileName,
+    fileExtension,
+    data,
+    addDateToFileName
+  )();
+
+  return {
+    filePath,
+    saveInFileFc,
+  };
+};
+
 export const saveInFile = async (
   pathFromRoot: string,
   fileName: string,
   fileExtension: string,
   data: any,
+  addDateToFileName = true
+) => {
+  const filePath = getFileNameForFunctionSaveInFile(
+    pathFromRoot,
+    fileName,
+    fileExtension,
+    addDateToFileName
+  );
+
+  const dirPath = path.dirname(filePath);
+
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, {
+      recursive: true,
+    });
+  }
+
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  return filePath;
+};
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const currentFilenameFriendlyDateTime = getFilenameFriendlyDateTime();
+const getFileNameForFunctionSaveInFile = (
+  pathFromRoot: string,
+  fileName: string,
+  fileExtension: string,
   addDateToFileName = true
 ) => {
   let completeFileName = "";
@@ -45,7 +101,6 @@ export const saveInFile = async (
   completeFileName += `.${fileExtension}`;
   // so this function has to be in a folder that is one folder deep in the root...
   // that's why we need the "../" in the path.resolve
-  // I don't know how to make it more resilient.
   // It sucks and I hate it but I don't have more patience to deal with this.
   const filePath = path.resolve(
     __dirname,
@@ -53,13 +108,5 @@ export const saveInFile = async (
     pathFromRoot,
     completeFileName
   );
-  const dirPath = path.dirname(filePath);
-
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, {
-      recursive: true,
-    });
-  }
-
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  return filePath;
 };

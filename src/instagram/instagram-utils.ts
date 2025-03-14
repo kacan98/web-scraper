@@ -1,12 +1,13 @@
+import { ScrapingSource } from "model";
 import { Page } from "playwright";
-import { getCookies, ScrapingPlatform } from "src/instagram/ig-login";
+import { getCookies } from "src/instagram/ig-login";
 
 export const login = async ({
   page,
   platform,
 }: {
   page: Page;
-  platform: ScrapingPlatform;
+  platform: ScrapingSource;
 }) => {
   const cookies = await getCookies({ platform });
   await page.context().addCookies(cookies);

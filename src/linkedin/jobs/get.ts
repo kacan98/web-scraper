@@ -8,15 +8,8 @@ import {
 } from "src/searchForElements";
 import { waitForever } from "src/utils";
 import { saveLinkedinJobInDb } from "./jobs.db";
-
-export interface LinkedinJob {
-  title: string;
-  company: string;
-  location: string;
-  jobDetails: string;
-  skills: string;
-  id: string;
-}
+import { LinkedinJobPost } from "db/schema/linkedin/linkedin-schema";
+import { ScrapingSource } from "model";
 
 const ONE_HOUR = 60 * 60 * 1000;
 
@@ -34,7 +27,7 @@ export const getJobsLinkedin = async (
 ) => {
   page.setDefaultTimeout(ONE_HOUR);
   if (shouldLogin) {
-    await login({ page, platform: "linkedin" }); // Not needed to search for jobs
+    await login({ page, platform: ScrapingSource.LinkedIn });
   } else {
     //dismiss prompt to log in
     //aria-label="Dismiss"
@@ -58,7 +51,7 @@ export const getJobsLinkedin = async (
   //testLinkedinJobSelectors(page);
 
   let jobItems = page.locator('a[href*="/jobs/view/"]');
-  const jobs: LinkedinJob[] = [];
+  const jobs: LinkedinJobPost[] = [];
   let currentPage = 1;
 
   let jobsToProcess = await jobItems.all();
@@ -72,8 +65,6 @@ export const getJobsLinkedin = async (
 
         const job = await extractJob(page);
         saveLinkedinJobInDb(job);
-
-        await waitForever();
 
         // Refresh the list of job items every 5 iterations
         if ((i + 1) % 5 === 0) {
@@ -113,7 +104,7 @@ const waitForAtLeastOneSelector = async (page: Page, selectors: string[]) => {
   await elements.waitFor({ state: "visible" });
 };
 
-const extractJob = async (page: Page): Promise<LinkedinJob> => {
+const extractJob = async (page: Page): Promise<LinkedinJobPost> => {
   //wait until h1 is visible
   await waitForAtLeastOneSelector(
     page,
@@ -121,13 +112,19 @@ const extractJob = async (page: Page): Promise<LinkedinJob> => {
   );
 
   const { jobTitle, company, location, jobDetails, skills } =
-    await tryToFindElementsFromSelectors(page, {
-      jobTitle: linkedinJobSelectors.jobDetails.jobTitle,
-      company: linkedinJobSelectors.jobDetails.company,
-      location: linkedinJobSelectors.jobDetails.jobLocation,
-      jobDetails: linkedinJobSelectors.jobDetails.jobDetails,
-      skills: linkedinJobSelectors.jobDetails.skills,
-    });
+    await tryToFindElementsFromSelectors(
+      page,
+      {
+        jobTitle: linkedinJobSelectors.jobDetails.jobTitle,
+        company: linkedinJobSelectors.jobDetails.company,
+        location: linkedinJobSelectors.jobDetails.jobLocation,
+        jobDetails: linkedinJobSelectors.jobDetails.jobDetails,
+        skills: linkedinJobSelectors.jobDetails.skills,
+      },
+      {
+        allOrNothing: false,
+      }
+    );
 
   const url = page.url();
   const urlParams = new URLSearchParams(new URL(url).search);
@@ -138,8 +135,8 @@ const extractJob = async (page: Page): Promise<LinkedinJob> => {
     company: await extractText(company),
     location: await extractText(location),
     jobDetails: await extractText(jobDetails),
-    skills: await extractText(skills),
-    id: jobId,
+    skills: await extractText(skills, false),
+    linkedinId: jobId,
   };
 };
 
@@ -177,7 +174,9 @@ async function search(
         searchButton: linkedinJobSelectors.buttonSearch,
         locationInput: linkedinJobSelectors.locationInput,
       },
-      true
+      {
+        allOrNothing: true,
+      }
     );
 
     if (!elements) throw new Error("Search elements not found");

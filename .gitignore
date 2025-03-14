@@ -11,3 +11,4 @@ node_modules/
 /pgdata/
 /.*/
 /errors/
+/captured_responses/

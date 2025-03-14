@@ -3,6 +3,7 @@ import path, { dirname } from "path";
 import { BrowserContext, chromium, Cookie, Page } from "playwright";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import { ScrapingSource } from "model";
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -18,10 +19,8 @@ const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD;
 if (!LINKEDIN_LOGIN || !LINKEDIN_PASSWORD)
   throw new Error("LINKEDIN_USERNAME or LINKEDIN_PASSWORD not set");
 
-export type ScrapingPlatform = keyof typeof platformSpecifics;
-
 const platformSpecifics = {
-  instagram: {
+  [ScrapingSource.Instagram]: {
     pathToCookies: "../instagram-cookies.json",
     loginUrl: "https://www.instagram.com",
     selectors: {
@@ -33,7 +32,7 @@ const platformSpecifics = {
     password: IG_PASSWORD,
     username: IG_LOGIN,
   },
-  linkedin: {
+  [ScrapingSource.LinkedIn]: {
     pathToCookies: "../linkedin-cookies.json",
     loginUrl: "https://www.linkedin.com",
     selectors: {
@@ -51,7 +50,7 @@ const platformSpecifics = {
 export const getCookies = async ({
   platform,
 }: {
-  platform: ScrapingPlatform;
+  platform: ScrapingSource;
 }): Promise<Cookie[]> => {
   let cookies: Cookie[] | undefined;
 
@@ -90,7 +89,7 @@ const logIntoInstagramManually = async ({
 }: {
   page: Page;
   context: BrowserContext;
-  platform: ScrapingPlatform;
+  platform: ScrapingSource;
 }): Promise<Cookie[]> => {
   const platformDetails = platformSpecifics[platform];
   //set longer timeout
