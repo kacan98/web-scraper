@@ -1,22 +1,36 @@
 import { db } from "db";
 import {
+  jobPostInSearch,
   LinkedinJobPost,
   linkedInJobPostsTable,
+  LinkedinJobSearch,
+  linkedinJobSearch,
 } from "db/schema/linkedin/linkedin-schema";
+import { QueryResult } from "pg";
 import { log } from "src/utils";
 
 export const saveLinkedinJobInDb = async (job: LinkedinJobPost) => {
-  const result = await db
+  return await db
     .insert(linkedInJobPostsTable)
     .values(job)
     .onConflictDoUpdate({
       target: linkedInJobPostsTable.linkedinId,
       set: job,
     })
+    .returning()
+    .execute().then((result) => result[0]);
+};
+
+export const createNewJobSearch = async (job: string, location: string) => {
+  const result = await db
+    .insert(linkedinJobSearch)
+    .values({ job, location, date: new Date() })
+    .returning({ id: linkedinJobSearch.id })
     .execute();
-  if (result.rowCount === 1) {
-    log("inserted job", job.title);
-  } else {
-    log("result of insert", result);
-  }
+
+  return result[0].id;
+};
+
+export const markJobAsInSearch = async (jobId: number, jobSearchId: number) => {
+  await db.insert(jobPostInSearch).values({ jobId, jobSearchId }).execute();
 };

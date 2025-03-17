@@ -3,9 +3,10 @@ import { Page } from "playwright";
 import { openPage } from "src/utils";
 import yargs from "yargs";
 import { getJobsLinkedin } from "./jobs/get";
+import { createNewJobSearch } from "./jobs/jobs.db";
 
 const options = {
-  job: {
+  searchTerm: {
     describe: "What is the job description that you want to scrape?",
     default: "Web Developer",
   },
@@ -17,9 +18,9 @@ const options = {
 
 export const openLinkedinCmdMenu = async () => {
   const argv = await yargs(process.argv.slice(2))
-    .option("job", {
-      alias: "j",
-      describe: options.job.describe,
+    .option("searchTerm", {
+      alias: "s",
+      describe: options.searchTerm.describe,
       type: "string",
     })
     .option("location", {
@@ -28,19 +29,19 @@ export const openLinkedinCmdMenu = async () => {
       type: "string",
     }).argv;
 
-  let job = argv.job;
+  let searchTerm = argv.searchTerm;
   let location = argv.location;
 
-  if (!job) {
+  if (!searchTerm) {
     const response = await inquirer.prompt([
       {
         type: "input",
-        name: "jobDescription",
-        message: options.job.describe,
+        name: "searchTerm",
+        message: options.searchTerm.describe,
         default: "Web Developer",
       },
     ]);
-    job = response.jobDescription;
+    searchTerm = response.searchTerm;
   }
 
   if (!location) {
@@ -55,19 +56,22 @@ export const openLinkedinCmdMenu = async () => {
     location = response.location;
   }
 
-  if (!job || !location) {
+  if (!searchTerm || !location) {
     throw new Error("Job description and location are required");
   }
+
+  const searchId = await createNewJobSearch(searchTerm, location);
 
   let page: Page;
   page = await openPage();
   // Don't need this. Never worked. Could be revived one day if I feel like it or need it.
   // await captureAndSaveResponses(page, ScrapingSource.LinkedIn);
   // await mockResponses(page, ScrapingSource.LinkedIn);
-  
+
   getJobsLinkedin(page, {
-    jobDescription: job,
+    jobDescription: searchTerm,
     location,
+    searchId,
     shouldLogin: true,
   });
 };

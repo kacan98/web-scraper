@@ -7,7 +7,7 @@ import {
   tryToFindElementsFromSelectors,
 } from "src/searchForElements";
 import { waitForever } from "src/utils";
-import { saveLinkedinJobInDb } from "./jobs.db";
+import { markJobAsInSearch, saveLinkedinJobInDb } from "./jobs.db";
 import { LinkedinJobPost } from "db/schema/linkedin/linkedin-schema";
 import { ScrapingSource } from "model";
 
@@ -18,10 +18,12 @@ export const getJobsLinkedin = async (
   {
     jobDescription,
     location,
+    searchId,
     shouldLogin = false,
   }: {
     jobDescription: string;
     location: string;
+    searchId: number;
     shouldLogin?: boolean;
   }
 ) => {
@@ -44,8 +46,8 @@ export const getJobsLinkedin = async (
   await page.waitForTimeout(3000);
 
   // Make sure that all jobs are loaded
-  // const paginationListSelector = ".artdeco-pagination__pages";
-  // await page.locator(paginationListSelector).scrollIntoViewIfNeeded();
+  const paginationListSelector = ".artdeco-pagination__pages";
+  await page.locator(paginationListSelector).scrollIntoViewIfNeeded();
 
   // Check if the selectors are still valid
   //testLinkedinJobSelectors(page);
@@ -64,7 +66,8 @@ export const getJobsLinkedin = async (
         await page.waitForTimeout(1750); // wait for the job details to load
 
         const job = await extractJob(page);
-        saveLinkedinJobInDb(job);
+        const {id: jobId} = await saveLinkedinJobInDb(job);
+        await markJobAsInSearch(jobId, searchId);
 
         // Refresh the list of job items every 5 iterations
         if ((i + 1) % 5 === 0) {

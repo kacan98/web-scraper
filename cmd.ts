@@ -1,8 +1,8 @@
+import inquirer from "inquirer";
+import { ScrapingSource } from "model";
 import { openInstagramCmdMenu } from "src/instagram/instagram-cmd";
 import { openLinkedinCmdMenu } from "src/linkedin/linkedin-cmd";
-import inquirer from "inquirer";
 import yargs from "yargs/yargs";
-import { ScrapingSource } from "model";
 
 enum MainMenuActions {
   INSTAGRAM = ScrapingSource.Instagram,

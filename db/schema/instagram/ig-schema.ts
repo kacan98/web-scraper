@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, integer, pgEnum, pgSchema, text, unique, varchar } from "drizzle-orm/pg-core";
+import { boolean, check, integer, pgSchema, text, unique, varchar } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm/relations";
 
 if (!process.env.IG_LOGIN) throw new Error("IG_LOGIN not set");
@@ -49,7 +49,7 @@ export const igUserStatusesTable = instagramSchema.table(
   "ig_user_statuses",
   {
     //oficial IG fields:
-    id: varchar().primaryKey(),
+    id: varchar().primaryKey().references(()=>igUserTable.id),
     following: boolean(),
     incoming_request: boolean(),
     is_bestie: boolean(),
@@ -68,13 +68,6 @@ export const igUserStatusesTable = instagramSchema.table(
 );
 
 export type IGStatusesTableType = typeof igUserStatusesTable.$inferInsert;
-
-export const userStatusRelation = relations(igUserStatusesTable, ({ one }) => ({
-  statusUserRelation: one(igUserTable, {
-    fields: [igUserStatusesTable.id],
-    references: [igUserTable.id],
-  }),
-}));
 
 export const numberFollowedTodayTable = instagramSchema.table(
   "number_followed_today",
