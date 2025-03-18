@@ -2,7 +2,7 @@ import inquirer from "inquirer";
 import { Page } from "playwright";
 import { openPage } from "src/utils";
 import yargs from "yargs";
-import { getJobsLinkedin } from "./jobs/get";
+import { scrapeJobsLinkedin } from "./jobs/get";
 import { createNewJobSearch } from "./jobs/jobs.db";
 
 const options = {
@@ -68,7 +68,7 @@ export const openLinkedinCmdMenu = async () => {
   // await captureAndSaveResponses(page, ScrapingSource.LinkedIn);
   // await mockResponses(page, ScrapingSource.LinkedIn);
 
-  getJobsLinkedin(page, {
+  scrapeJobsLinkedin(page, {
     jobDescription: searchTerm,
     location,
     searchId,

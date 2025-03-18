@@ -1,19 +1,20 @@
-import { Locator, Page } from "@playwright/test";
+import { Page } from "@playwright/test";
 import { log } from "console";
+import { LinkedinJobPost } from "db/schema/linkedin/linkedin-schema";
+import { ScrapingSource } from "model";
 import { login } from "src/instagram/instagram-utils";
 import {
   extractText,
+  findFunctioningSelector,
   tryToFindElementFromSelectors,
   tryToFindElementsFromSelectors,
 } from "src/searchForElements";
-import { waitForever } from "src/utils";
 import { markJobAsInSearch, saveLinkedinJobInDb } from "./jobs.db";
-import { LinkedinJobPost } from "db/schema/linkedin/linkedin-schema";
-import { ScrapingSource } from "model";
+import { sleepApprox } from "src/utils";
 
 const ONE_HOUR = 60 * 60 * 1000;
 
-export const getJobsLinkedin = async (
+export const scrapeJobsLinkedin = async (
   page: Page,
   {
     jobDescription,
@@ -45,57 +46,47 @@ export const getJobsLinkedin = async (
 
   await page.waitForTimeout(3000);
 
-  // Make sure that all jobs are loaded
-  const paginationListSelector = ".artdeco-pagination__pages";
-  await page.locator(paginationListSelector).scrollIntoViewIfNeeded();
-
   // Check if the selectors are still valid
   //testLinkedinJobSelectors(page);
 
-  let jobItems = page.locator('a[href*="/jobs/view/"]');
-  const jobs: LinkedinJobPost[] = [];
+  let jobCardsSelector = await findFunctioningSelector(
+    page,
+    linkedinJobSelectors.jobCard
+  );
+
+  if (!jobCardsSelector) {
+    throw new Error("No job cards found");
+  }
+
+  let totalCardsFound = 0;
   let currentPage = 1;
 
-  let jobsToProcess = await jobItems.all();
-  while (jobsToProcess.length > 0) {
-    for (let i = 0; i < jobsToProcess.length; i++) {
-      const jobItem = jobsToProcess[i];
-
-      if (jobItem) {
-        await jobItem.click();
-        await page.waitForTimeout(1750); // wait for the job details to load
-
-        const job = await extractJob(page);
-        const {id: jobId} = await saveLinkedinJobInDb(job);
-        await markJobAsInSearch(jobId, searchId);
-
-        // Refresh the list of job items every 5 iterations
-        if ((i + 1) % 5 === 0) {
-          jobsToProcess = await jobItems.all();
-        }
-
-        // Save the jobs to a file
-        console.log("This is the job that I found: ", job);
-      }
-    }
-
-    // Check if there is a next page
-    const nextPageButton = await page.$(
-      `button[aria-label="Page ${currentPage + 1}"]`
+  let morePagesExist = true;
+  while (morePagesExist) {
+    const { cardsFound } = await scrapeAllJobsOnPage(
+      page,
+      jobCardsSelector,
+      searchId
+    );
+    totalCardsFound += cardsFound;
+    log(
+      `Found ${cardsFound} cards on this page. In total ${totalCardsFound} found so far.`
     );
 
-    if (nextPageButton) {
-      await nextPageButton.click();
-      await page.waitForTimeout(3000); // wait for the next page to load
-      jobsToProcess = await jobItems.all();
-      currentPage++;
+    const nextPage = await findNextPageAndNavigateToItIfItExists(
+      page,
+      currentPage
+    );
+    if (nextPage) {
+      log("Going to page", nextPage);
+      currentPage = nextPage;
     } else {
-      console.log("No more pages found");
-      break; // No more pages
+      log("No more pages found.");
+      morePagesExist = false;
     }
   }
 
-  log("Done. Found jobs: ", jobs.length);
+  log("Done. Found ", totalCardsFound, " jobs.");
 };
 
 const waitForAtLeastOneSelector = async (page: Page, selectors: string[]) => {
@@ -105,6 +96,69 @@ const waitForAtLeastOneSelector = async (page: Page, selectors: string[]) => {
   }
 
   await elements.waitFor({ state: "visible" });
+};
+
+const scrapeAllJobsOnPage = async (
+  page: Page,
+  cardSelector: string,
+  searchId: number
+): Promise<{
+  cardsFound: number;
+}> => {
+  let continueScrapingJobs = true;
+  let cardsFoundOnCurrentPage = 0;
+  while (continueScrapingJobs) {
+    try {
+      if (cardsFoundOnCurrentPage > 0) {
+        // we have to scroll to the next card sometimes
+        const previousCard = page.locator(cardSelector).nth(cardsFoundOnCurrentPage - 1);
+        previousCard.hover();
+        await page.mouse.wheel(0, 250);
+      }
+      log(1);
+      const nextCard = page.locator(cardSelector).nth(cardsFoundOnCurrentPage);
+      log(2);
+
+      cardsFoundOnCurrentPage++;
+
+      await nextCard.click({ timeout: 5000 });
+      log(3);
+      log(`Found card nr ${cardsFoundOnCurrentPage}`);
+      log(4);
+      await sleepApprox(page, 1750); // wait for the job details to load
+
+      const job = await extractJob(page);
+      const { id: jobId } = await saveLinkedinJobInDb(job);
+      await markJobAsInSearch(jobId, searchId);
+      log("saved job with id", jobId);
+    } catch (error) {
+      console.error("Something went wrong with getting a job:", error);
+      if(cardsFoundOnCurrentPage === 0) throw new Error('Something went wrong. No jobs found.')
+      continueScrapingJobs = false;
+    }
+  }
+
+  return { cardsFound: cardsFoundOnCurrentPage };
+};
+
+// returns page successfully navigated to
+const findNextPageAndNavigateToItIfItExists = async (
+  page: Page,
+  currentPageNumber: number
+): Promise<undefined | number> => {
+  const nextPageNumber = currentPageNumber + 1;
+  // Check if there is a next page
+  const nextPageButton = await page.$(
+    `button[aria-label="Page ${nextPageNumber}"]`
+  );
+
+  if (nextPageButton) {
+    await nextPageButton.click();
+    await page.waitForTimeout(3000); // wait for the next page to load
+    return nextPageNumber;
+  }
+  console.log("No more pages found");
+  return undefined;
 };
 
 const extractJob = async (page: Page): Promise<LinkedinJobPost> => {
@@ -161,6 +215,11 @@ export const linkedinJobSelectors = {
     jobDetails: ["#job-details"],
     skills: [".job-details-how-you-match__skills-section-descriptive-skill"],
   },
+  jobCard: [
+    'a.job-card-container__link[href*="/jobs/view/"]',
+    'a[data-control-id][href*="/jobs/view/"]',
+    'a[aria-label][href*="/jobs/view/"]',
+  ],
 };
 
 async function search(

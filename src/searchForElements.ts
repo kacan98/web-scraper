@@ -25,7 +25,7 @@ export async function tryToFindElementsFromSelectors<
 >(
   page: Page,
   selectors: T,
-  options?: {
+  options: {
     allOrNothing: true;
   }
 ): Promise<{ [K in keyof T]: Locator } | undefined>;
@@ -74,6 +74,22 @@ export async function tryToFindElementsFromSelectors<
 
   return allOrNothing ? allOrNothingResults : potentiallyPartialResults;
 }
+
+export const findFunctioningSelector = async (
+  page: Page,
+  selectors: string[]
+): Promise<string | undefined> => {
+  for (const s of selectors) {
+    const element = page.locator(s);
+
+    const nrOfelements = await element.count();
+
+    if (await element.first().isVisible()) {
+      return s;
+    }
+  }
+  return undefined;
+};
 
 export async function extractText(
   locator?: Locator,

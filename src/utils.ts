@@ -42,8 +42,9 @@ export const sleepApprox = async (
 ) => {
   const randomFactor = Math.random() * 0.4 + 0.8;
   const timeToWait = ms * randomFactor;
-  if (!ignoreLog && timeToWait > 2000)
+  if (!ignoreLog){
     log(`Waiting for ${timeToWait / 1000} s`);
+  }
   await page.waitForTimeout(timeToWait);
 };
 
