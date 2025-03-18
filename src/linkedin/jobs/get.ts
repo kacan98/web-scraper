@@ -111,7 +111,9 @@ const scrapeAllJobsOnPage = async (
     try {
       if (cardsFoundOnCurrentPage > 0) {
         // we have to scroll to the next card sometimes
-        const previousCard = page.locator(cardSelector).nth(cardsFoundOnCurrentPage - 1);
+        const previousCard = page
+          .locator(cardSelector)
+          .nth(cardsFoundOnCurrentPage - 1);
         previousCard.hover();
         await page.mouse.wheel(0, 250);
       }
@@ -131,9 +133,14 @@ const scrapeAllJobsOnPage = async (
       const { id: jobId } = await saveLinkedinJobInDb(job);
       await markJobAsInSearch(jobId, searchId);
       log("saved job with id", jobId);
-    } catch (error) {
-      console.error("Something went wrong with getting a job:", error);
-      if(cardsFoundOnCurrentPage === 0) throw new Error('Something went wrong. No jobs found.')
+    } catch (error: any) {
+      if (error.message && error.message.contains("Timeout")) {
+        log("We likely got to the end of the page.");
+      } else {
+        console.error("Something went wrong with getting a job:", error);
+        if (cardsFoundOnCurrentPage === 0)
+          throw new Error("Something went wrong. No jobs found.");
+      }
       continueScrapingJobs = false;
     }
   }
