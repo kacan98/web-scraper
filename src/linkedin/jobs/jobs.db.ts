@@ -3,11 +3,9 @@ import {
   jobPostInSearch,
   LinkedinJobPost,
   linkedInJobPostsTable,
-  LinkedinJobSearch,
-  linkedinJobSearch,
+  linkedinJobSearch
 } from "db/schema/linkedin/linkedin-schema";
-import { QueryResult } from "pg";
-import { log } from "src/utils";
+import { asc } from 'drizzle-orm';
 
 export const saveLinkedinJobInDb = async (job: LinkedinJobPost) => {
   return await db
@@ -34,3 +32,19 @@ export const createNewJobSearch = async (job: string, location: string) => {
 export const markJobAsInSearch = async (jobId: number, jobSearchId: number) => {
   await db.insert(jobPostInSearch).values({ jobId, jobSearchId }).execute();
 };
+
+export const getJobs = ({
+  skip = 0,
+  top = 50
+}:{
+  skip?: number,
+  top?: number
+}) =>{
+  return db
+    .select()
+    .from(linkedInJobPostsTable)
+    .orderBy(asc(linkedInJobPostsTable.id))
+    .limit(top)
+    .offset(skip)
+    .execute();
+}

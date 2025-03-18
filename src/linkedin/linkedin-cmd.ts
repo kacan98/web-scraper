@@ -2,7 +2,7 @@ import inquirer from "inquirer";
 import { Page } from "playwright";
 import { openPage } from "src/utils";
 import yargs from "yargs";
-import { scrapeJobsLinkedin } from "./jobs/get";
+import { scrapeJobsLinkedin } from "./jobs/scrape";
 import { createNewJobSearch } from "./jobs/jobs.db";
 
 const options = {

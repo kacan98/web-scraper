@@ -1,5 +1,7 @@
 import inquirer from "inquirer";
 import { ScrapingSource } from "model";
+import { analyzeLinkedInJobs } from "src/ai/ai-cmd";
+import { askGemini } from "src/ai/gemini";
 import { openInstagramCmdMenu } from "src/instagram/instagram-cmd";
 import { openLinkedinCmdMenu } from "src/linkedin/linkedin-cmd";
 import yargs from "yargs/yargs";
@@ -7,17 +9,22 @@ import yargs from "yargs/yargs";
 enum MainMenuActions {
   INSTAGRAM = ScrapingSource.Instagram,
   LINKEDIN = ScrapingSource.LinkedIn,
+  AI = "AI",
   EXIT = "Exit",
 }
 
 const mainMenu = async () => {
   const argv = await yargs(process.argv.slice(2))
     .scriptName("Krels scraper")
-    .alias("p", "platform")
-    .describe("p", "Platform to scrape")
-    .choices("p", [MainMenuActions.INSTAGRAM, MainMenuActions.LINKEDIN]).argv;
+    .alias("a", "action")
+    .describe("a", "What do you want to do?")
+    .choices("a", [
+      MainMenuActions.INSTAGRAM,
+      MainMenuActions.LINKEDIN,
+      MainMenuActions.AI,
+    ]).argv;
 
-  let action = argv.p;
+  let action = argv.a;
 
   if (!action) {
     const result = await inquirer.prompt({
@@ -27,6 +34,7 @@ const mainMenu = async () => {
       choices: [
         { name: MainMenuActions.INSTAGRAM, value: MainMenuActions.INSTAGRAM },
         { name: MainMenuActions.LINKEDIN, value: MainMenuActions.LINKEDIN },
+        { name: "Ask AI", value: MainMenuActions.AI },
         { name: "Exit", value: MainMenuActions.EXIT },
       ],
     });
@@ -40,6 +48,9 @@ const mainMenu = async () => {
       break;
     case MainMenuActions.LINKEDIN:
       openLinkedinCmdMenu();
+      break;
+    case MainMenuActions.AI:
+      await analyzeLinkedInJobs();
       break;
     case MainMenuActions.EXIT:
       console.log("Exiting...");
