@@ -1,4 +1,5 @@
 import {
+  boolean,
   integer,
   pgSchema,
   text,
@@ -35,11 +36,6 @@ export const jobPostInSearch = linkedinSchema.table("job_post_in_search", {
     .references(() => linkedinJobSearch.id),
 });
 
-export const technologyOnJobs = linkedinSchema.table("technology_on_jobs", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  name: varchar({ length: 255 }).notNull().unique(),
-})
-
 export const jobAIAnalysis = linkedinSchema.table("job_ai_analysis", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   jobId: integer()
@@ -53,13 +49,10 @@ export const jobAIAnalysis = linkedinSchema.table("job_ai_analysis", {
   workModel: varchar({ length: 255 }),
   postLanguage: varchar({ length: 255 }).notNull(),
   salary: varchar({ length: 255 }),
-  jobSummary: text(),
-  technologiesRequired: text().array().references(() => technologyOnJobs.id).notNull(),
-  technologiesOptional: text().array().references(() => technologyOnJobs.id).notNull(),
+  jobSummary: text()
 });
 
 export type LinkedinJobPost = typeof linkedInJobPostsTable.$inferInsert;
 export type LinkedinJobSearch = typeof linkedinJobSearch.$inferInsert;
 export type JobPostInSearch = typeof jobPostInSearch.$inferInsert;
-export type TechnologyOnJobs = typeof technologyOnJobs.$inferInsert;
 export type JobAIAnalysis = typeof jobAIAnalysis.$inferInsert;

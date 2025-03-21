@@ -51,18 +51,18 @@ export const JobExtractionSchema = {
             description: "2-3 sentence, no bullshit summary of what the employee is going to be doing.",
             nullable: false
         },
-        technologiesRequired: {
+        skillsRequired: {
             type: SchemaType.ARRAY,
             items: {
-                description: "The technology stack required for the job. I want this to be easy to search in the database so make it as specific as possible. E.g. put 'AWS' and 'Amazon Web Services' in the same array instead of having them in one entry as 'Amazon Web Services (AWS)'",
+                description: "The skills or technology stack required for the job. I want this to be easy to search in the database so make it as specific as possible. E.g. put 'AWS' and 'Amazon Web Services' in the same array instead of having them in one entry as 'Amazon Web Services (AWS)'",
                 type: SchemaType.STRING,
             },
             nullable: false
         },
-        technologiesOptional: {
+        skillsOptional: {
             type: SchemaType.ARRAY,
             items: {
-                description: "The technology stack that is optional for the job",
+                description: "The skills or technology stack that is optional/nice to have for the job",
                 type: SchemaType.STRING
             },
             nullable: false

@@ -1,30 +1,30 @@
 import { db } from 'db';
-import { technologyOnJobs } from 'db/schema/linkedin/linkedin-schema';
+import { skill } from 'db/schema/linkedin/skills-schema';
 import { inArray } from 'drizzle-orm';
 
-export const findOrInsertTechnologies = async (technologies: string[]): Promise<{ [name: string]: number }> => {
-    // Step 1: Find existing technologies
+export const findOrInsertSkills = async (skills: string[]): Promise<{ [name: string]: number }> => {
+    // Step 1: Find existing skills
     const existingTechs = await db
         .select({
-            id: technologyOnJobs.id,
-            name: technologyOnJobs.name,
+            id: skill.id,
+            name: skill.name,
         })
-        .from(technologyOnJobs)
-        .where(inArray(technologyOnJobs.name, technologies));
+        .from(skill)
+        .where(inArray(skill.name, skills));
 
-    // Step 2: Identify new technologies
+    // Step 2: Identify new skills
     const existingNames = existingTechs.map(tech => tech.name);
-    const newTechNames = [...new Set(technologies.filter(name => !existingNames.includes(name)))];
+    const newTechNames = [...new Set(skills.filter(name => !existingNames.includes(name)))];
 
-    // Step 3: Insert new technologies if any
+    // Step 3: Insert new skills if any
     let newTechs: { id: number; name: string }[] = [];
     if (newTechNames.length > 0) {
         newTechs = await db
-            .insert(technologyOnJobs)
+            .insert(skill)
             .values(newTechNames.map(name => ({ name })))
             .returning({
-                id: technologyOnJobs.id,
-                name: technologyOnJobs.name,
+                id: skill.id,
+                name: skill.name,
             });
     }
 
