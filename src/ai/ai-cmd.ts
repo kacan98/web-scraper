@@ -1,11 +1,9 @@
-import { SchemaType } from "@google/generative-ai";
-import { FromSchema } from "json-schema-to-ts";
+import { insertAIAnalysis } from "db/schema/linkedin/linkedin-schema";
 import { getJobs } from "src/linkedin/jobs/jobs.db";
 import {
   extractJobInfoWithGemini
 } from "./gemini";
-import { GeminiJobExtractionSchema, GeminiExtractedJob, geminiModels } from "./gemini.model";
-import { insertAIAnalysis, LinkedinJobPost } from "db/schema/linkedin/linkedin-schema";
+import { geminiModels } from "./gemini.model";
 
 export enum AISource {
   Gemini = 'gemini',
