@@ -1,7 +1,6 @@
 import { chromium } from "playwright";
 
 async function main() {
-    console.log('Hello World');
   // Launch a new instance of a Chromium browser with headless mode
   // disabled for visibility
   const browser = await chromium.launch({

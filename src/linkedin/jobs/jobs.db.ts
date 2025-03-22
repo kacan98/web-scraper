@@ -7,7 +7,7 @@ import {
 } from "db/schema/linkedin/linkedin-schema";
 import { asc } from 'drizzle-orm';
 
-export const saveLinkedinJobInDb = async (job: LinkedinJobPost) => {
+export const saveLinkedinJobInDb = async (job: Omit<LinkedinJobPost, 'id'>) => {
   return await db
     .insert(linkedInJobPostsTable)
     .values(job)
@@ -39,7 +39,7 @@ export const getJobs = ({
 }:{
   skip?: number,
   top?: number
-}) =>{
+  }): Promise<LinkedinJobPost[]> =>{
   return db
     .select()
     .from(linkedInJobPostsTable)

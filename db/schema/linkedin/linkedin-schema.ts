@@ -1,3 +1,4 @@
+import { db } from "db";
 import {
   boolean,
   integer,
@@ -6,6 +7,7 @@ import {
   timestamp,
   varchar
 } from "drizzle-orm/pg-core";
+import { findOrInsertSkillsForJob, insertJobSkillMappings } from "src/linkedin/jobs/skills.db";
 
 export const linkedinSchema = pgSchema("linkedin");
 
@@ -52,7 +54,59 @@ export const jobAIAnalysis = linkedinSchema.table("job_ai_analysis", {
   jobSummary: text()
 });
 
-export type LinkedinJobPost = typeof linkedInJobPostsTable.$inferInsert;
-export type LinkedinJobSearch = typeof linkedinJobSearch.$inferInsert;
-export type JobPostInSearch = typeof jobPostInSearch.$inferInsert;
-export type JobAIAnalysis = typeof jobAIAnalysis.$inferInsert;
+export const insertAIAnalysis = async (jobId: number, analysis: {
+  yearsOfExperienceExpected?: number,
+  numberOfApplicants?: number,
+  seniorityLevel?: string,
+  decelopmentSide?: string,
+  companyIndustry?: string,
+  workModel?: string,
+  postLanguage: string,
+  salary?: string,
+  jobSummary: string,
+  skillsRequired: string[],
+  skillsOptional: string[]
+}) => {
+  db.transaction(async (tx) => {
+    await tx
+      .insert(jobAIAnalysis)
+      .values({
+        jobId,
+        ...analysis
+      })
+      .returning()
+      .execute().then((result) => result[0]);
+
+    await findOrInsertSkillsForJob(analysis.skillsRequired, tx).then(async (result) => {
+      await insertJobSkillMappings(jobId, Object.values(result), true, tx);
+    });
+    await findOrInsertSkillsForJob(analysis.skillsOptional, tx).then(async (result) => {
+      await insertJobSkillMappings(jobId, Object.values(result), false, tx);
+    })
+  })
+};
+
+//Skills 👇
+export const skill = linkedinSchema.table("skill", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  name: varchar({ length: 255 }).notNull().unique(),
+})
+
+export const skillJobMapping = linkedinSchema.table("skill_job_mapping", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  jobId: integer()
+    .notNull()
+    .references(() => linkedInJobPostsTable.id),
+  skillId: integer()
+    .notNull()
+    .references(() => skill.id),
+  isRequired: boolean().notNull(), // Indicates if the technology is required or optional
+});
+//Skills 👆
+
+export type Skill = typeof skill.$inferInsert;
+export type SkillJobMapping = typeof skillJobMapping.$inferInsert;
+export type LinkedinJobPost = typeof linkedInJobPostsTable.$inferInsert & { id: number };
+export type LinkedinJobSearch = typeof linkedinJobSearch.$inferInsert & { id: number };
+export type JobPostInSearch = typeof jobPostInSearch.$inferInsert & { id: number };
+export type JobAIAnalysis = typeof jobAIAnalysis.$inferInsert & { id: number };

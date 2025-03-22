@@ -9,7 +9,7 @@ import yargs from "yargs/yargs";
 enum MainMenuActions {
   INSTAGRAM = ScrapingSource.Instagram,
   LINKEDIN = ScrapingSource.LinkedIn,
-  AI = "AI",
+  AI = 'Analyse LinkedIn Jobs',
   EXIT = "Exit",
 }
 
@@ -34,7 +34,7 @@ const mainMenu = async () => {
       choices: [
         { name: MainMenuActions.INSTAGRAM, value: MainMenuActions.INSTAGRAM },
         { name: MainMenuActions.LINKEDIN, value: MainMenuActions.LINKEDIN },
-        { name: "Ask AI", value: MainMenuActions.AI },
+        { name: MainMenuActions.AI, value: MainMenuActions.AI },
         { name: "Exit", value: MainMenuActions.EXIT },
       ],
     });

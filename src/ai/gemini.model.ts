@@ -1,7 +1,7 @@
 import { SchemaType } from "@google/generative-ai";
 import { FromSchema } from "json-schema-to-ts";
 
-export const JobExtractionSchema = {
+export const GeminiJobExtractionSchema = {
     description: "Extracted job information schema",
     type: SchemaType.OBJECT,
     properties: {
@@ -70,4 +70,61 @@ export const JobExtractionSchema = {
     },
 } as const;
 
-export type JobExtractionSchema = FromSchema<typeof JobExtractionSchema>;
+export type GeminiExtractedJob = FromSchema<typeof GeminiJobExtractionSchema>;
+
+interface ModelMetrics {
+    requestsPerMinute: number;
+    tokensPerMinute: number;
+    requestsPerDay: number;
+}
+
+export const geminiModels = {
+    "Gemini 2.0 Flash": {
+        apiName: "gemini-2.0-flash",
+        requestsPerMinute: 15,
+        tokensPerMinute: 1000000,
+        requestsPerDay: 1500,
+    },
+    "Gemini 2.0 Flash Experimental": {
+        apiName: "gemini-2.0-flash",
+        requestsPerMinute: 10,
+        tokensPerMinute: 1000000,
+        requestsPerDay: 1500,
+    },
+    "Gemini 2.0 Flash-Lite": {
+        apiName: "gemini-2.0-flash",
+        requestsPerMinute: 30,
+        tokensPerMinute: 1000000,
+        requestsPerDay: 1500,
+    },
+    "Gemini 2.0 Pro Experimental 02-05": {
+        apiName: "gemini-2.0-pro",
+        requestsPerMinute: 2,
+        tokensPerMinute: 1000000,
+        requestsPerDay: 50,
+    },
+    "Gemini 2.0 Flash Thinking Experimental 01-21": {
+        apiName: "gemini-2.0-flash-thinking",
+        requestsPerMinute: 10,
+        tokensPerMinute: 4000000,
+        requestsPerDay: 1500,
+    },
+    "Gemini 1.5 Flash": {
+        apiName: "gemini-1.5-flash",
+        requestsPerMinute: 15,
+        tokensPerMinute: 1000000,
+        requestsPerDay: 1500,
+    },
+    "Gemini 1.5 Flash-8B": {
+        apiName: "gemini-1.5-flash-8b",
+        requestsPerMinute: 15,
+        tokensPerMinute: 1000000,
+        requestsPerDay: 1500,
+    },
+    "Gemini 1.5 Pro": {
+        apiName: "gemini-1.5-pro",
+        requestsPerMinute: 2,
+        tokensPerMinute: 32000,
+        requestsPerDay: 50,
+    }
+} as const;

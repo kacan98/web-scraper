@@ -98,6 +98,8 @@ const waitForAtLeastOneSelector = async (page: Page, selectors: string[]) => {
   await elements.waitFor({ state: "visible" });
 };
 
+const endOfPageError = new Error('We likely got to the end of the page.');
+
 const scrapeAllJobsOnPage = async (
   page: Page,
   cardSelector: string,
@@ -117,16 +119,16 @@ const scrapeAllJobsOnPage = async (
         previousCard.hover();
         await page.mouse.wheel(0, 250);
       }
-      log(1);
       const nextCard = page.locator(cardSelector).nth(cardsFoundOnCurrentPage);
-      log(2);
 
       cardsFoundOnCurrentPage++;
 
-      await nextCard.click({ timeout: 5000 });
-      log(3);
+      try {
+        await nextCard.click({ timeout: 5000 });
+      } catch {
+        throw endOfPageError;
+      }
       log(`Found card nr ${cardsFoundOnCurrentPage}`);
-      log(4);
       await sleepApprox(page, 1750); // wait for the job details to load
 
       const job = await extractJob(page);
@@ -134,8 +136,8 @@ const scrapeAllJobsOnPage = async (
       await markJobAsInSearch(jobId, searchId);
       log("saved job with id", jobId);
     } catch (error: any) {
-      if (error.message && error.message.contains("Timeout")) {
-        log("We likely got to the end of the page.");
+      if (error === endOfPageError) {
+        log(endOfPageError.message);
       } else {
         console.error("Something went wrong with getting a job:", error);
         if (cardsFoundOnCurrentPage === 0)
@@ -168,7 +170,7 @@ const findNextPageAndNavigateToItIfItExists = async (
   return undefined;
 };
 
-const extractJob = async (page: Page): Promise<LinkedinJobPost> => {
+const extractJob = async (page: Page): Promise<Omit<LinkedinJobPost, 'id'>> => {
   //wait until h1 is visible
   await waitForAtLeastOneSelector(
     page,
