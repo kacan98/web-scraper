@@ -1,6 +1,8 @@
 import { db } from "db";
+import { eq } from "drizzle-orm";
 import {
   boolean,
+  date,
   integer,
   pgSchema,
   text,
@@ -19,6 +21,7 @@ export const linkedInJobPostsTable = linkedinSchema.table("job_posts", {
   jobDetails: text().notNull(),
   skills: text(),
   linkedinId: varchar({ length: 255 }).notNull().unique(),
+  dateScraped: timestamp().notNull().defaultNow(),
 });
 
 export const linkedinJobSearch = linkedinSchema.table("job_search", {
@@ -46,12 +49,14 @@ export const jobAIAnalysis = linkedinSchema.table("job_ai_analysis", {
   yearsOfExperienceExpected: integer(),
   numberOfApplicants: integer(),
   seniorityLevel: varchar({ length: 255 }),
-  decelopmentSide: varchar({ length: 255 }),
+  decelopmentSide: varchar({ length: 255 }), // 'front-end', 'back-end', 'full-stack'
   companyIndustry: varchar({ length: 255 }),
   workModel: varchar({ length: 255 }),
   postLanguage: varchar({ length: 255 }).notNull(),
   salary: varchar({ length: 255 }),
-  jobSummary: text()
+  jobSummary: text(),
+  jobPosted: date(),
+  dateAIAnalysisGenerated: timestamp().notNull().defaultNow(),
 });
 
 export const insertAIAnalysis = async (jobId: number, analysis: {
@@ -63,16 +68,36 @@ export const insertAIAnalysis = async (jobId: number, analysis: {
   workModel?: string,
   postLanguage: string,
   salary?: string,
+  postedDaysAgo?: number,
   jobSummary: string,
   skillsRequired: string[],
-  skillsOptional: string[]
+  skillsOptional: string[],
 }) => {
+  //round yearsOfExperienceExpected to be a whole number
+  if (analysis.yearsOfExperienceExpected) {
+    analysis.yearsOfExperienceExpected = Math.round(analysis.yearsOfExperienceExpected);
+  }
+
+  const jobScrapedDate: Date = await db
+    .select({ dateScraped: linkedInJobPostsTable.dateScraped })
+    .from(linkedInJobPostsTable)
+    .where(eq(linkedInJobPostsTable.id, jobId))
+    .execute().then((result) => {
+      return result[0].dateScraped;
+    });
+
+  const datePosted = getDatePosted({
+    jobScrapedDate,
+    postedDaysAgo: analysis.postedDaysAgo
+  })
+
   db.transaction(async (tx) => {
     await tx
       .insert(jobAIAnalysis)
       .values({
         jobId,
-        ...analysis
+        ...analysis,
+        jobPosted: datePosted?.toISOString(),
       })
       .returning()
       .execute().then((result) => result[0]);
@@ -103,6 +128,22 @@ export const skillJobMapping = linkedinSchema.table("skill_job_mapping", {
   isRequired: boolean().notNull(), // Indicates if the technology is required or optional
 });
 //Skills 👆
+
+const getDatePosted = (
+  { jobScrapedDate, postedDaysAgo }:
+    {
+      jobScrapedDate: Date,
+      //can be decimal, e.g. 0.5 days ago
+      postedDaysAgo?: number
+    }): Date | undefined => {
+  if (postedDaysAgo === undefined) return undefined;
+
+  const datePosted = new Date(jobScrapedDate);
+  //set with hours to make sure we take decimal days into account
+  const hoursAgo = postedDaysAgo * 24;
+  datePosted.setHours(datePosted.getHours() - hoursAgo);
+  return datePosted;
+}
 
 export type Skill = typeof skill.$inferInsert;
 export type SkillJobMapping = typeof skillJobMapping.$inferInsert;

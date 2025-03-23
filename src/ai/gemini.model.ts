@@ -44,6 +44,7 @@ export const GeminiJobExtractionSchema = {
         },
         salary: {
             type: SchemaType.STRING,
+            description: "The salary range for the job, if available. Remember to include the currency.",
             nullable: true,
         },
         jobSummary: {
@@ -67,16 +68,15 @@ export const GeminiJobExtractionSchema = {
             },
             nullable: false
         },
+        postedDaysAgo: {
+            type: SchemaType.NUMBER,
+            description: "The number of days ago the job was posted",
+            nullable: true
+        }
     },
 } as const;
 
 export type GeminiExtractedJob = FromSchema<typeof GeminiJobExtractionSchema>;
-
-interface ModelMetrics {
-    requestsPerMinute: number;
-    tokensPerMinute: number;
-    requestsPerDay: number;
-}
 
 export const geminiModels = {
     "Gemini 2.0 Flash": {

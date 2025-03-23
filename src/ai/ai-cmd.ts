@@ -4,13 +4,17 @@ import {
   extractJobInfoWithGemini
 } from "./gemini";
 import { geminiModels } from "./gemini.model";
+import { logProgress } from "src/utils";
 
 export enum AISource {
   Gemini = 'gemini',
   OpenAi = 'openAi'
 }
 
-export const analyzeLinkedInJobs = async () => {
+export const analyzeLinkedInJobs = async (maxJobs?: number) => {
+  const jobsCount = await getJobs({ onlyGetCount: true });
+  console.log('Total jobs to process:', jobsCount);
+
   const model: keyof typeof geminiModels = "Gemini 2.0 Flash-Lite";
   const modelProperties = geminiModels[model];
   const limitPerMinute = modelProperties.requestsPerMinute;
@@ -20,6 +24,8 @@ export const analyzeLinkedInJobs = async () => {
   const requestTimestamps: number[] = []; // Tracks timestamps of recent requests
 
   while (hasMoreJobs) {
+    logProgress(skip, jobsCount, 5, "jobs");
+
     // Check rate limit using sliding window
     const now = Date.now();
     // Remove timestamps older than 60 seconds
@@ -41,7 +47,7 @@ export const analyzeLinkedInJobs = async () => {
     const jobs = await getJobs({ top: 1, skip: skip });
 
     // If no jobs returned, we're done
-    if (jobs.length === 0) {
+    if (jobs.length === 0 || (maxJobs && skip >= maxJobs)) {
       hasMoreJobs = false;
       continue;
     }
@@ -74,6 +80,7 @@ export const analyzeLinkedInJobs = async () => {
       companyIndustry: jobInfo.companyIndustry ?? undefined,
       workModel: jobInfo.workModel ?? undefined,
       salary: jobInfo.salary ?? undefined,
+      postedDaysAgo: jobInfo.postedDaysAgo ?? undefined,
     });
 
     // Record the request timestamp and move to next job

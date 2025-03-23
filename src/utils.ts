@@ -76,3 +76,21 @@ export const log = (...args: any[]) => {
     console.log(...args);
   }
 };
+
+export function logProgress(
+  current: number,
+  total: number,
+  chunkSize: number = 5,
+  itemTypeLabel: string = 'items'
+) {
+  if (current % chunkSize === 0) {
+    const progressBar = Array(20).fill(' ');
+    const progress = Math.round((current / total) * 20);
+    progressBar.fill('=', 0, progress);
+    console.log(
+      `[${progressBar.join('')}] ${Math.round(
+        (current / total) * 100
+      )}% (${current}/${total} ${itemTypeLabel})`
+    );
+  }
+}

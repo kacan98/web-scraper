@@ -6,8 +6,7 @@ import {
   linkedInJobPostsTable,
   linkedinJobSearch
 } from "db/schema/linkedin/linkedin-schema";
-import { asc, eq, isNull, inArray, and, notExists, exists } from 'drizzle-orm';
-import { AnyPgSelect, PgSelect, PgSelectBase } from "drizzle-orm/pg-core";
+import { and, asc, count, eq, exists, inArray, notExists } from 'drizzle-orm';
 
 export const saveLinkedinJobInDb = async (job: Omit<LinkedinJobPost, 'id'>) => {
   return await db
@@ -35,19 +34,24 @@ export const markJobAsInSearch = async (jobId: number, jobSearchId: number) => {
   await db.insert(jobPostInSearch).values({ jobId, jobSearchId }).execute();
 };
 
-export const getJobs = ({
-  skip = 0,
-  top = 50,
+export async function getJobs(params: { onlyGetCount: true }): Promise<number>
+export async function getJobs(params: { skip?: number; top?: number; onlyWithoutAnalysis?: boolean; jobSearchIds?: number[]; onlyGetCount?: false }): Promise<LinkedinJobPost[]>;
+export async function getJobs({
+  skip,
+  top,
   onlyWithoutAnalysis = true,
   jobSearchIds,
+  onlyGetCount = false
 }: {
   skip?: number;
   top?: number;
   jobSearchIds?: number[];
   onlyWithoutAnalysis?: boolean;
-}): Promise<LinkedinJobPost[]> => {
-  return db.select()
-    .from(linkedInJobPostsTable)
+  onlyGetCount?: boolean;
+}): Promise<LinkedinJobPost[] | number> {
+  const baseQuery = onlyGetCount ? db.select({ count: count() }) : db.select()
+
+  const actualQuery = baseQuery.from(linkedInJobPostsTable)
     .where(and(
       onlyWithoutAnalysis ? notExists(
         db
@@ -66,8 +70,20 @@ export const getJobs = ({
       )
         : undefined,
     ))
-    .orderBy(asc(linkedInJobPostsTable.id))
-    .limit(top)
-    .offset(skip)
-    .execute();
+
+  if (onlyGetCount) {
+    return actualQuery.execute().then(r => {
+      const result = r[0] as { count: number };
+      return result.count;
+    })
+  } else {
+    top = top || 50;
+    skip = skip || 0;
+
+    return actualQuery
+      .orderBy(asc(linkedInJobPostsTable.id))
+      .limit(top)
+      .offset(skip).execute() as any;
+  }
+
 };

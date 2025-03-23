@@ -25,6 +25,7 @@ const mainMenu = async () => {
     ]).argv;
 
   let action = argv.a;
+  console.log(action)
 
   if (!action) {
     const result = await inquirer.prompt({
