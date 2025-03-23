@@ -1,0 +1,2 @@
+- [ ] gather which skills I have
+- [ ] fetch jobs from the db based on criteria

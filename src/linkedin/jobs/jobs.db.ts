@@ -34,9 +34,19 @@ export const markJobAsInSearch = async (jobId: number, jobSearchId: number) => {
   await db.insert(jobPostInSearch).values({ jobId, jobSearchId }).execute();
 };
 
-export async function getJobs(params: { onlyGetCount: true }): Promise<number>
-export async function getJobs(params: { skip?: number; top?: number; onlyWithoutAnalysis?: boolean; jobSearchIds?: number[]; onlyGetCount?: false }): Promise<LinkedinJobPost[]>;
-export async function getJobs({
+export const getJobById = async (jobId: number) => {
+  return await db
+    .select()
+    .from(linkedInJobPostsTable)
+    .where(eq(linkedInJobPostsTable.id, jobId))
+    .execute().then(r=>r[0])
+}
+
+//count of jobs
+export async function getJobIds(params: { onlyGetCount: true; onlyWithoutAnalysis?: boolean }): Promise<number>
+//array of ids of jobs
+export async function getJobIds(params: { skip?: number; top?: number; onlyWithoutAnalysis?: boolean; jobSearchIds?: number[]; onlyGetCount?: false }): Promise<number[]>;
+export async function getJobIds({
   skip,
   top,
   onlyWithoutAnalysis = true,
@@ -48,8 +58,8 @@ export async function getJobs({
   jobSearchIds?: number[];
   onlyWithoutAnalysis?: boolean;
   onlyGetCount?: boolean;
-}): Promise<LinkedinJobPost[] | number> {
-  const baseQuery = onlyGetCount ? db.select({ count: count() }) : db.select()
+  }): Promise<number[] | number> {
+  const baseQuery = onlyGetCount ? db.select({ count: count() }) : db.select({ id: linkedInJobPostsTable.id })
 
   const actualQuery = baseQuery.from(linkedInJobPostsTable)
     .where(and(
@@ -77,13 +87,16 @@ export async function getJobs({
       return result.count;
     })
   } else {
-    top = top || 50;
-    skip = skip || 0;
+    top = top ?? 50;
+    skip = skip ?? 0;
 
     return actualQuery
       .orderBy(asc(linkedInJobPostsTable.id))
       .limit(top)
-      .offset(skip).execute() as any;
+      .offset(skip)
+      .execute()
+      .then(r =>
+        (r as { id: number }[]).map(j => j.id)
+      );
   }
-
 };

@@ -1,5 +1,5 @@
 import { insertAIAnalysis } from "db/schema/linkedin/linkedin-schema";
-import { getJobs } from "src/linkedin/jobs/jobs.db";
+import { getJobById, getJobIds } from "src/linkedin/jobs/jobs.db";
 import {
   extractJobInfoWithGemini
 } from "./gemini";
@@ -11,20 +11,32 @@ export enum AISource {
   OpenAi = 'openAi'
 }
 
-export const analyzeLinkedInJobs = async (maxJobs?: number) => {
-  const jobsCount = await getJobs({ onlyGetCount: true });
-  console.log('Total jobs to process:', jobsCount);
+export const analyzeLinkedInJobs = async () => {
+  //for debugging 👇
+  const maxJobs: number | undefined = undefined;
+  const onlyJobsWithoutAnalysis = true;
+  //for debugging 👆
+
+  const jobIds = await getJobIds({ onlyWithoutAnalysis: onlyJobsWithoutAnalysis }).then(r => r.slice(0, maxJobs));
+  const jobsToAnalyze = jobIds.length;
+  
+  if (jobsToAnalyze === 0) {
+    console.log('No jobs to process. Exiting...');
+
+    return;
+  }
+
+  console.log('Total jobs to process:', jobsToAnalyze);
 
   const model: keyof typeof geminiModels = "Gemini 2.0 Flash-Lite";
   const modelProperties = geminiModels[model];
   const limitPerMinute = modelProperties.requestsPerMinute;
 
-  let skip = 0;
-  let hasMoreJobs = true;
+  let index = 0;
   const requestTimestamps: number[] = []; // Tracks timestamps of recent requests
 
-  while (hasMoreJobs) {
-    logProgress(skip, jobsCount, 5, "jobs");
+  for (let jobId of jobIds) {
+    logProgress(index, jobsToAnalyze, 1, "jobs");
 
     // Check rate limit using sliding window
     const now = Date.now();
@@ -43,29 +55,20 @@ export const analyzeLinkedInJobs = async (maxJobs?: number) => {
       continue;
     }
 
-    // Get one job at a time
-    const jobs = await getJobs({ top: 1, skip: skip });
+    const job = await getJobById(jobId);
+    const jobInfo = await extractJobInfoWithGemini(job, modelProperties.apiName);
 
-    // If no jobs returned, we're done
-    if (jobs.length === 0 || (maxJobs && skip >= maxJobs)) {
-      hasMoreJobs = false;
-      continue;
-    }
-
-    // Process single job
-    const j = jobs[0];
-    const jobInfo = await extractJobInfoWithGemini(j, modelProperties.apiName);
-
+    //We don't 100% trust the AI so check that the mandatory fields are there:
     if (
       !jobInfo.postLanguage ||
       !jobInfo.jobSummary ||
       !jobInfo.skillsRequired ||
       !jobInfo.skillsOptional
     ) {
-      throw new Error('Something is wrong with the data returned from Gemini');
+      throw new Error('Something is wrong with the data returned from the AI');
     }
 
-    await insertAIAnalysis(j.id, {
+    await insertAIAnalysis(job.id, {
       // required
       postLanguage: jobInfo.postLanguage,
       jobSummary: jobInfo.jobSummary,
@@ -85,6 +88,8 @@ export const analyzeLinkedInJobs = async (maxJobs?: number) => {
 
     // Record the request timestamp and move to next job
     requestTimestamps.push(Date.now());
-    skip++;
+    index++;
   }
+
+  console.log('Done ✅ - All jobs have been processed.');
 };
