@@ -86,6 +86,7 @@ export const analyzeLinkedInJobs = async () => {
       workModel: jobInfo.workModel ?? undefined,
       salary: jobInfo.salary ?? undefined,
       postedDaysAgo: jobInfo.postedDaysAgo ?? undefined,
+      city: jobInfo.city ?? undefined
     });
 
     // Record the request timestamp and move to next job

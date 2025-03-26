@@ -1,7 +1,6 @@
 import { db } from "db";
 import {
     jobAiAnalysisTable,
-    JobAIAnalysis,
     linkedInJobPostsTable
 } from "db/schema/linkedin/linkedin-schema";
 import { eq } from "drizzle-orm";
@@ -29,7 +28,8 @@ export const insertAIAnalysis = async (jobId: number, analysis: {
     jobSummary: string,
     skillsRequired: string[],
     skillsOptional: string[],
-    isInternship: boolean
+    isInternship: boolean,
+    city?: string
 }) => {
     //round yearsOfExperienceExpected to be a whole number
     if (analysis.yearsOfExperienceExpected) {
@@ -55,7 +55,7 @@ export const insertAIAnalysis = async (jobId: number, analysis: {
             .values({
                 jobId,
                 ...analysis,
-                jobPosted: datePosted?.toISOString(),
+                jobPosted: datePosted.toISOString(),
             })
             .returning()
           .execute().then((result) => result[0]);
@@ -75,8 +75,8 @@ const getDatePosted = (
             jobScrapedDate: Date,
             //can be decimal, e.g. 0.5 days ago
             postedDaysAgo?: number
-        }): Date | undefined => {
-    if (postedDaysAgo === undefined) return undefined;
+        }): Date => {
+    if (postedDaysAgo === undefined) return new Date('1970-01-01');
 
     const datePosted = new Date(jobScrapedDate);
     //set with hours to make sure we take decimal days into account

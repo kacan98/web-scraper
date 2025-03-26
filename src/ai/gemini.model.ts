@@ -77,6 +77,11 @@ export const GeminiJobExtractionSchema = {
             type: SchemaType.BOOLEAN,
             description: "Whether the job is an internship or not",
             nullable: false
+        },
+        city: {
+            type: SchemaType.STRING,
+            description: "City where the job is going to take place. Null if remote.",
+            nullable: true
         }
     },
 } as const;

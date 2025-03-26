@@ -202,7 +202,7 @@ const extractJob = async (page: Page): Promise<Omit<LinkedinJobPostTable, 'id'>>
     location: await extractText(location),
     jobDetails: await extractText(jobDetails),
     skills: await extractText(skills, false),
-    linkedinId: jobId,
+    linkedinId: jobId
   };
 };
 

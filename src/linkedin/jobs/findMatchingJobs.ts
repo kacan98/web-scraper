@@ -2,11 +2,12 @@ import { db } from "db";
 import { linkedInJobPostsTable, skillTable, skillJobMappingTable, jobAiAnalysisTable } from "db/schema/linkedin/linkedin-schema";
 import { and, desc, eq, exists, inArray, isNull, lt, not, or } from "drizzle-orm";
 import { ilike } from "drizzle-orm";
+import { showImportantInfoRowsInBrowser } from "./showJobsInHtmlReport";
 
 export const findMatchingJobs = async () => {
     const jobs = await getFilteredJobs({
         includeJobsWithSkills: ["TypeScript", "Angular", "React", "C#", ".NET", "Node.js", "JavaScript"],
-        removeJobsWithSkills: ["Java", "AWS", "Python", "Ruby", "PHP", "Kotlin", "Golang", "Scala", "Rust", "Swift", "Objective-C", ],
+        removeJobsWithSkills: ["Java", "AWS", "Python", "Ruby", "PHP", "Kotlin", "Golang", "Scala", "Rust", "Swift", "Objective-C", "Ruby on Rails"],
         acceptableSeniorityLevels: ['mid', 'junior'],
         maxYearsOfExperienceRequired: 4,
         includeInternships: false,
@@ -14,10 +15,22 @@ export const findMatchingJobs = async () => {
     });
 
     console.log('Found jobs: ', jobs.length);
-    //log a random job
-    const jobNumber = Math.floor(Math.random() * jobs.length);
-    console.log('Here is job number: ', jobNumber);
-    console.log(jobs[jobNumber]);
+    const importantInfoRows = (jobs.map((j) => {
+        return {
+            url: `https://www.linkedin.com/jobs/search/?currentJobId=${j.job_posts.linkedinId}`,
+            title: j.job_posts.title,
+            location: j.job_posts.location,
+            skills: j.job_posts.skills,
+            yearsOfExperienceExpected: j.job_ai_analysis?.yearsOfExperienceExpected,
+            seniorityLevel: j.job_ai_analysis?.seniorityLevel,
+            decelopmentSide: j.job_ai_analysis?.decelopmentSide,
+            workModel: j.job_ai_analysis?.workModel,
+            jobSumary: j.job_ai_analysis?.jobSummary,
+            jobPosted: j.job_ai_analysis?.jobPosted
+        }
+    }));
+
+    showImportantInfoRowsInBrowser(importantInfoRows);
 }
 
 export function skillSubQuery(skills: string[]) {
@@ -84,8 +97,6 @@ export function getFilteredJobs({
                 ) : undefined
             )
         ).orderBy(desc(jobAiAnalysisTable.jobPosted))
-
-    console.log('getFilteredJobs', query.toSQL());
 
     return query;
 }

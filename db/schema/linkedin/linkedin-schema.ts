@@ -39,8 +39,6 @@ export const jobPostInSearchTable = linkedinSchema.table("job_post_in_search", {
     .references(() => linkedinJobSearchTable.id),
 });
 
-const seniorityLevel = linkedinSchema.enum("seniority_level", ["entry", "mid", "senior", "lead"]);
-
 export const jobAiAnalysisTable = linkedinSchema.table("job_ai_analysis", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   jobId: integer()
@@ -48,16 +46,17 @@ export const jobAiAnalysisTable = linkedinSchema.table("job_ai_analysis", {
     .references(() => linkedInJobPostsTable.id),
   yearsOfExperienceExpected: integer(),
   numberOfApplicants: integer(),
-  seniorityLevel: varchar({ length: 255 }),
+  seniorityLevel: varchar({ length: 255 }), // "junior", "mid", "senior", "lead"
   decelopmentSide: varchar({ length: 255 }), // 'front-end', 'back-end', 'full-stack'
   companyIndustry: varchar({ length: 255 }),
   workModel: varchar({ length: 255 }),
   postLanguage: varchar({ length: 255 }).notNull(),
   salary: varchar({ length: 255 }),
   jobSummary: text(),
-  jobPosted: date(),
+  jobPosted: date().notNull(),
   isInternship: boolean(),
   dateAIAnalysisGenerated: timestamp().notNull().defaultNow(),
+  city: varchar({ length: 255 }) //todo: Make multiple cities possible in the future
 });
 
 //Skills 👇
@@ -113,4 +112,4 @@ export type SkillJobMappingTable = typeof skillJobMappingTable.$inferInsert;
 export type LinkedinJobPostTable = typeof linkedInJobPostsTable.$inferInsert & { id: number };
 export type LinkedinJobSearchTable = typeof linkedinJobSearchTable.$inferInsert & { id: number };
 export type JobPostInSearchTable = typeof jobPostInSearchTable.$inferInsert & { id: number };
-export type JobAIAnalysis = typeof jobAiAnalysisTable.$inferInsert & { id: number };
+export type JobAIAnalysisTable = typeof jobAiAnalysisTable.$inferInsert & { id: number };
