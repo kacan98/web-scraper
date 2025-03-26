@@ -1,6 +1,6 @@
 import { Page } from "@playwright/test";
 import { log } from "console";
-import { LinkedinJobPost } from "db/schema/linkedin/linkedin-schema";
+import { LinkedinJobPostTable } from "db/schema/linkedin/linkedin-schema";
 import { ScrapingSource } from "model";
 import { login } from "src/instagram/instagram-utils";
 import {
@@ -170,7 +170,7 @@ const findNextPageAndNavigateToItIfItExists = async (
   return undefined;
 };
 
-const extractJob = async (page: Page): Promise<Omit<LinkedinJobPost, 'id'>> => {
+const extractJob = async (page: Page): Promise<Omit<LinkedinJobPostTable, 'id'>> => {
   //wait until h1 is visible
   await waitForAtLeastOneSelector(
     page,

@@ -1,10 +1,10 @@
-import { insertAIAnalysis } from "db/schema/linkedin/linkedin-schema";
 import { getJobById, getJobIds } from "src/linkedin/jobs/jobs.db";
+import { logProgress } from "src/utils";
 import {
   extractJobInfoWithGemini
 } from "./gemini";
 import { geminiModels } from "./gemini.model";
-import { logProgress } from "src/utils";
+import { insertAIAnalysis } from "src/linkedin/jobs/ai-job-analysis.db";
 
 export enum AISource {
   Gemini = 'gemini',
@@ -63,7 +63,8 @@ export const analyzeLinkedInJobs = async () => {
       !jobInfo.postLanguage ||
       !jobInfo.jobSummary ||
       !jobInfo.skillsRequired ||
-      !jobInfo.skillsOptional
+      !jobInfo.skillsOptional ||
+      jobInfo.isInternship === undefined
     ) {
       throw new Error('Something is wrong with the data returned from the AI');
     }
@@ -74,6 +75,7 @@ export const analyzeLinkedInJobs = async () => {
       jobSummary: jobInfo.jobSummary,
       skillsRequired: jobInfo.skillsRequired,
       skillsOptional: jobInfo.skillsOptional,
+      isInternship: jobInfo.isInternship,
 
       // optional
       yearsOfExperienceExpected: jobInfo.yearsOfExperienceExpected ?? undefined,

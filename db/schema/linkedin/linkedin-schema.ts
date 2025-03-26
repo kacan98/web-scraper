@@ -1,4 +1,3 @@
-import { db } from "db";
 import { eq } from "drizzle-orm";
 import {
   boolean,
@@ -9,7 +8,6 @@ import {
   timestamp,
   varchar
 } from "drizzle-orm/pg-core";
-import { findOrInsertSkillsForJob, insertJobSkillMappings } from "src/linkedin/jobs/skills.db";
 
 export const linkedinSchema = pgSchema("linkedin");
 
@@ -24,24 +22,26 @@ export const linkedInJobPostsTable = linkedinSchema.table("job_posts", {
   dateScraped: timestamp().notNull().defaultNow(),
 });
 
-export const linkedinJobSearch = linkedinSchema.table("job_search", {
+export const linkedinJobSearchTable = linkedinSchema.table("job_search", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   job: varchar({ length: 255 }).notNull(),
   location: varchar({ length: 255 }).notNull(),
   date: timestamp().notNull(),
 });
 
-export const jobPostInSearch = linkedinSchema.table("job_post_in_search", {
+export const jobPostInSearchTable = linkedinSchema.table("job_post_in_search", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   jobId: integer()
     .notNull()
     .references(() => linkedInJobPostsTable.id),
   jobSearchId: integer()
     .notNull()
-    .references(() => linkedinJobSearch.id),
+    .references(() => linkedinJobSearchTable.id),
 });
 
-export const jobAIAnalysis = linkedinSchema.table("job_ai_analysis", {
+const seniorityLevel = linkedinSchema.enum("seniority_level", ["entry", "mid", "senior", "lead"]);
+
+export const jobAiAnalysisTable = linkedinSchema.table("job_ai_analysis", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   jobId: integer()
     .notNull()
@@ -56,98 +56,61 @@ export const jobAIAnalysis = linkedinSchema.table("job_ai_analysis", {
   salary: varchar({ length: 255 }),
   jobSummary: text(),
   jobPosted: date(),
+  isInternship: boolean(),
   dateAIAnalysisGenerated: timestamp().notNull().defaultNow(),
 });
 
-export const insertAIAnalysis = async (jobId: number, analysis: {
-  yearsOfExperienceExpected?: number,
-  numberOfApplicants?: number,
-  seniorityLevel?: string,
-  decelopmentSide?: string,
-  companyIndustry?: string,
-  workModel?: string,
-  postLanguage: string,
-  salary?: string,
-  postedDaysAgo?: number,
-  jobSummary: string,
-  skillsRequired: string[],
-  skillsOptional: string[],
-}) => {
-  //round yearsOfExperienceExpected to be a whole number
-  if (analysis.yearsOfExperienceExpected) {
-    analysis.yearsOfExperienceExpected = Math.round(analysis.yearsOfExperienceExpected);
-  }
-
-  const jobScrapedDate: Date = await db
-    .select({ dateScraped: linkedInJobPostsTable.dateScraped })
-    .from(linkedInJobPostsTable)
-    .where(eq(linkedInJobPostsTable.id, jobId))
-    .execute().then((result) => {
-      return result[0].dateScraped;
-    });
-
-  const datePosted = getDatePosted({
-    jobScrapedDate,
-    postedDaysAgo: analysis.postedDaysAgo
-  })
-
-  db.transaction(async (tx) => {
-    await tx
-      .insert(jobAIAnalysis)
-      .values({
-        jobId,
-        ...analysis,
-        jobPosted: datePosted?.toISOString(),
-      })
-      .returning()
-      .execute().then((result) => result[0]);
-
-    await findOrInsertSkillsForJob(analysis.skillsRequired, tx).then(async (result) => {
-      await insertJobSkillMappings(jobId, Object.values(result), true, tx);
-    });
-    await findOrInsertSkillsForJob(analysis.skillsOptional, tx).then(async (result) => {
-      await insertJobSkillMappings(jobId, Object.values(result), false, tx);
-    })
-  })
-};
-
 //Skills 👇
-export const skill = linkedinSchema.table("skill", {
+export const skillTable = linkedinSchema.table("skill", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   name: varchar({ length: 255 }).notNull().unique(),
 })
 
-export const skillJobMapping = linkedinSchema.table("skill_job_mapping", {
+export const skillJobMappingTable = linkedinSchema.table("skill_job_mapping", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   jobId: integer()
     .notNull()
     .references(() => linkedInJobPostsTable.id),
   skillId: integer()
     .notNull()
-    .references(() => skill.id),
+    .references(() => skillTable.id),
   isRequired: boolean().notNull(), // Indicates if the technology is required or optional
 });
 //Skills 👆
 
-const getDatePosted = (
-  { jobScrapedDate, postedDaysAgo }:
-    {
-      jobScrapedDate: Date,
-      //can be decimal, e.g. 0.5 days ago
-      postedDaysAgo?: number
-    }): Date | undefined => {
-  if (postedDaysAgo === undefined) return undefined;
+export const jobsWithSkillsView = linkedinSchema.view("jobs_with_skills_view").as((qb) => {
+  const query = qb
+    .select({
+      job_post_id: linkedInJobPostsTable.id,
+      job_title: linkedInJobPostsTable.title,
+      company: linkedInJobPostsTable.company,
+      location: linkedInJobPostsTable.location,
+      linkedin_id: linkedInJobPostsTable.linkedinId,
+      skill_name: skillTable.name,
+      is_skill_required: skillJobMappingTable.isRequired,
+      yearsOfExperienceExpected: jobAiAnalysisTable.yearsOfExperienceExpected,
+      numberOfApplicants: jobAiAnalysisTable.numberOfApplicants,
+      seniorityLevel: jobAiAnalysisTable.seniorityLevel,
+      decelopmentSide: jobAiAnalysisTable.decelopmentSide,
+      companyIndustry: jobAiAnalysisTable.companyIndustry,
+      workModel: jobAiAnalysisTable.workModel,
+      postLanguage: jobAiAnalysisTable.postLanguage,
+      salary: jobAiAnalysisTable.salary,
+      jobSummary: jobAiAnalysisTable.jobSummary,
+      jobPosted: jobAiAnalysisTable.jobPosted,
+      dateAIAnalysisGenerated: jobAiAnalysisTable.dateAIAnalysisGenerated,
+    })
+    .from(linkedInJobPostsTable)
+    .leftJoin(skillJobMappingTable, eq(skillJobMappingTable.jobId, linkedInJobPostsTable.id))
+    .leftJoin(skillTable, eq(skillTable.id, skillJobMappingTable.skillId))
+    .leftJoin(jobAiAnalysisTable, eq(jobAiAnalysisTable.jobId, linkedInJobPostsTable.id));
 
-  const datePosted = new Date(jobScrapedDate);
-  //set with hours to make sure we take decimal days into account
-  const hoursAgo = postedDaysAgo * 24;
-  datePosted.setHours(datePosted.getHours() - hoursAgo);
-  return datePosted;
-}
+  return query;
+});
 
-export type Skill = typeof skill.$inferInsert;
-export type SkillJobMapping = typeof skillJobMapping.$inferInsert;
-export type LinkedinJobPost = typeof linkedInJobPostsTable.$inferInsert & { id: number };
-export type LinkedinJobSearch = typeof linkedinJobSearch.$inferInsert & { id: number };
-export type JobPostInSearch = typeof jobPostInSearch.$inferInsert & { id: number };
-export type JobAIAnalysis = typeof jobAIAnalysis.$inferInsert & { id: number };
+export type Skill = typeof skillTable.$inferInsert;
+export type SkillJobMappingTable = typeof skillJobMappingTable.$inferInsert;
+export type LinkedinJobPostTable = typeof linkedInJobPostsTable.$inferInsert & { id: number };
+export type LinkedinJobSearchTable = typeof linkedinJobSearchTable.$inferInsert & { id: number };
+export type JobPostInSearchTable = typeof jobPostInSearchTable.$inferInsert & { id: number };
+export type JobAIAnalysis = typeof jobAiAnalysisTable.$inferInsert & { id: number };

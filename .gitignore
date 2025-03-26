@@ -12,3 +12,4 @@ node_modules/
 /.*/
 /errors/
 /captured_responses/
+/db/schema/test/

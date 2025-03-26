@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { LinkedinJobPost } from "db/schema/linkedin/linkedin-schema";
+import { LinkedinJobPostTable } from "db/schema/linkedin/linkedin-schema";
 import "dotenv/config";
 import { GeminiExtractedJob, GeminiJobExtractionSchema, geminiModels } from "./gemini.model";
 
@@ -18,7 +18,7 @@ export const askGemini = async (prompt: string) => {
   return JSON.parse(result.response.text());
 };
 
-export const extractJobInfoWithGemini = async (jobPost: LinkedinJobPost, model: typeof geminiModels[keyof typeof geminiModels]['apiName']): Promise<GeminiExtractedJob> => {
+export const extractJobInfoWithGemini = async (jobPost: LinkedinJobPostTable, model: typeof geminiModels[keyof typeof geminiModels]['apiName']): Promise<GeminiExtractedJob> => {
   const client = genAI.getGenerativeModel({
     model, generationConfig: {
       responseMimeType: "application/json",

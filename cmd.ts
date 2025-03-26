@@ -3,6 +3,7 @@ import { ScrapingSource } from "model";
 import { analyzeLinkedInJobs } from "src/ai/ai-cmd";
 import { askGemini } from "src/ai/gemini";
 import { openInstagramCmdMenu } from "src/instagram/instagram-cmd";
+import { findMatchingJobs } from "src/linkedin/jobs/findMatchingJobs";
 import { openLinkedinCmdMenu } from "src/linkedin/linkedin-cmd";
 import yargs from "yargs/yargs";
 
@@ -10,6 +11,7 @@ enum MainMenuActions {
   INSTAGRAM = ScrapingSource.Instagram,
   LINKEDIN = ScrapingSource.LinkedIn,
   AI = 'Analyse LinkedIn Jobs',
+  FIND_MATCHING_JOBS = 'Find Matching Jobs',
   EXIT = "Exit",
 }
 
@@ -22,10 +24,10 @@ const mainMenu = async () => {
       MainMenuActions.INSTAGRAM,
       MainMenuActions.LINKEDIN,
       MainMenuActions.AI,
+      MainMenuActions.FIND_MATCHING_JOBS
     ]).argv;
 
   let action = argv.a;
-  console.log(action)
 
   if (!action) {
     const result = await inquirer.prompt({
@@ -36,6 +38,7 @@ const mainMenu = async () => {
         { name: MainMenuActions.INSTAGRAM, value: MainMenuActions.INSTAGRAM },
         { name: MainMenuActions.LINKEDIN, value: MainMenuActions.LINKEDIN },
         { name: MainMenuActions.AI, value: MainMenuActions.AI },
+        { name: MainMenuActions.FIND_MATCHING_JOBS, value: MainMenuActions.FIND_MATCHING_JOBS },
         { name: "Exit", value: MainMenuActions.EXIT },
       ],
     });
@@ -52,6 +55,9 @@ const mainMenu = async () => {
       break;
     case MainMenuActions.AI:
       await analyzeLinkedInJobs();
+      break;
+    case MainMenuActions.FIND_MATCHING_JOBS:
+      await findMatchingJobs();
       break;
     case MainMenuActions.EXIT:
       console.log("Exiting...");

@@ -1,5 +1,5 @@
 import { db } from 'db';
-import { skill, skillJobMapping } from 'db/schema/linkedin/linkedin-schema';
+import { skillTable, skillJobMappingTable } from 'db/schema/linkedin/linkedin-schema';
 import { inArray } from 'drizzle-orm';
 
 export type DatabaseType = typeof db;
@@ -9,11 +9,11 @@ export const findOrInsertSkillsForJob = async (skills: string[], tx: Transaction
     // Step 1: Find existing skills
     const existingSkills = await tx
         .select({
-            id: skill.id,
-            name: skill.name,
+            id: skillTable.id,
+            name: skillTable.name,
         })
-        .from(skill)
-        .where(inArray(skill.name, skills));
+        .from(skillTable)
+        .where(inArray(skillTable.name, skills));
 
     // Step 2: Identify new skills
     const existingNames = existingSkills.map(skill => skill.name);
@@ -23,11 +23,11 @@ export const findOrInsertSkillsForJob = async (skills: string[], tx: Transaction
     let newSkills: { id: number; name: string }[] = [];
     if (newSkillNames.length > 0) {
         newSkills = await tx
-            .insert(skill)
+            .insert(skillTable)
             .values(newSkillNames.map(name => ({ name })))
             .returning({
-                id: skill.id,
-                name: skill.name,
+                id: skillTable.id,
+                name: skillTable.name,
             });
     }
 
@@ -49,7 +49,7 @@ export const insertJobSkillMappings = async (jobId: number, skillIds: number[], 
     }
 
     return await tx
-        .insert(skillJobMapping)
+        .insert(skillJobMappingTable)
         .values(
             skillIds
                 .map(skillId => ({

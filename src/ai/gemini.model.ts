@@ -72,6 +72,11 @@ export const GeminiJobExtractionSchema = {
             type: SchemaType.NUMBER,
             description: "The number of days ago the job was posted",
             nullable: true
+        },
+        isInternship: {
+            type: SchemaType.BOOLEAN,
+            description: "Whether the job is an internship or not",
+            nullable: false
         }
     },
 } as const;

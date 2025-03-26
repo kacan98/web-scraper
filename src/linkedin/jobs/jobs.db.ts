@@ -1,14 +1,14 @@
 import { db } from "db";
 import {
-  jobAIAnalysis,
-  jobPostInSearch,
-  LinkedinJobPost,
+  jobAiAnalysisTable,
+  jobPostInSearchTable,
+  LinkedinJobPostTable,
   linkedInJobPostsTable,
-  linkedinJobSearch
+  linkedinJobSearchTable
 } from "db/schema/linkedin/linkedin-schema";
 import { and, asc, count, eq, exists, inArray, notExists } from 'drizzle-orm';
 
-export const saveLinkedinJobInDb = async (job: Omit<LinkedinJobPost, 'id'>) => {
+export const saveLinkedinJobInDb = async (job: Omit<LinkedinJobPostTable, 'id'>) => {
   return await db
     .insert(linkedInJobPostsTable)
     .values(job)
@@ -22,16 +22,16 @@ export const saveLinkedinJobInDb = async (job: Omit<LinkedinJobPost, 'id'>) => {
 
 export const createNewJobSearch = async (job: string, location: string) => {
   const result = await db
-    .insert(linkedinJobSearch)
+    .insert(linkedinJobSearchTable)
     .values({ job, location, date: new Date() })
-    .returning({ id: linkedinJobSearch.id })
+    .returning({ id: linkedinJobSearchTable.id })
     .execute();
 
   return result[0].id;
 };
 
 export const markJobAsInSearch = async (jobId: number, jobSearchId: number) => {
-  await db.insert(jobPostInSearch).values({ jobId, jobSearchId }).execute();
+  await db.insert(jobPostInSearchTable).values({ jobId, jobSearchId }).execute();
 };
 
 export const getJobById = async (jobId: number) => {
@@ -66,16 +66,16 @@ export async function getJobIds({
       onlyWithoutAnalysis ? notExists(
         db
           .select()
-          .from(jobAIAnalysis)
-          .where(eq(jobAIAnalysis.jobId, linkedInJobPostsTable.id))
+          .from(jobAiAnalysisTable)
+          .where(eq(jobAiAnalysisTable.jobId, linkedInJobPostsTable.id))
       ) : undefined,
       (jobSearchIds && jobSearchIds.length > 0) ? exists(
         db
           .select()
-          .from(jobPostInSearch)
+          .from(jobPostInSearchTable)
           .where(and(
-            eq(jobPostInSearch.jobId, linkedInJobPostsTable.id),
-            inArray(jobPostInSearch.jobSearchId, jobSearchIds)
+            eq(jobPostInSearchTable.jobId, linkedInJobPostsTable.id),
+            inArray(jobPostInSearchTable.jobSearchId, jobSearchIds)
           ))
       )
         : undefined,
