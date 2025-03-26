@@ -1,33 +1,27 @@
 import inquirer from "inquirer";
 import { ScrapingSource } from "model";
-import { analyzeLinkedInJobs } from "src/ai/ai-cmd";
-import { askGemini } from "src/ai/gemini";
 import { openInstagramCmdMenu } from "src/instagram/instagram-cmd";
-import { findMatchingJobs } from "src/linkedin/jobs/findMatchingJobs";
-import { openLinkedinCmdMenu } from "src/linkedin/linkedin-cmd";
+import { linkedinMenu } from "src/linkedin/linkedin-cmd";
+import { scrapeLinkedinJobs } from "src/linkedin/linkedin-scraping-cmd";
 import yargs from "yargs/yargs";
 
 enum MainMenuActions {
   INSTAGRAM = ScrapingSource.Instagram,
   LINKEDIN = ScrapingSource.LinkedIn,
-  AI = 'Analyse LinkedIn Jobs',
-  FIND_MATCHING_JOBS = 'Find Matching Jobs',
   EXIT = "Exit",
 }
 
 const mainMenu = async () => {
   const argv = await yargs(process.argv.slice(2))
-    .scriptName("Krels scraper")
-    .alias("a", "action")
-    .describe("a", "What do you want to do?")
-    .choices("a", [
+    .scriptName("Krels scraper/LinkedIn jobs thing")
+    .alias("p", "action")
+    .describe("p", "Which platform do you want to use?")
+    .choices("p", [
       MainMenuActions.INSTAGRAM,
       MainMenuActions.LINKEDIN,
-      MainMenuActions.AI,
-      MainMenuActions.FIND_MATCHING_JOBS
     ]).argv;
 
-  let action = argv.a;
+  let action = argv.p;
 
   if (!action) {
     const result = await inquirer.prompt({
@@ -35,10 +29,8 @@ const mainMenu = async () => {
       name: "action",
       message: "What would you like to do?",
       choices: [
-        { name: MainMenuActions.INSTAGRAM, value: MainMenuActions.INSTAGRAM },
         { name: MainMenuActions.LINKEDIN, value: MainMenuActions.LINKEDIN },
-        { name: MainMenuActions.AI, value: MainMenuActions.AI },
-        { name: MainMenuActions.FIND_MATCHING_JOBS, value: MainMenuActions.FIND_MATCHING_JOBS },
+        { name: MainMenuActions.INSTAGRAM, value: MainMenuActions.INSTAGRAM },
         { name: "Exit", value: MainMenuActions.EXIT },
       ],
     });
@@ -48,16 +40,10 @@ const mainMenu = async () => {
 
   switch (action) {
     case MainMenuActions.INSTAGRAM:
-      openInstagramCmdMenu();
+      await openInstagramCmdMenu();
       break;
     case MainMenuActions.LINKEDIN:
-      openLinkedinCmdMenu();
-      break;
-    case MainMenuActions.AI:
-      await analyzeLinkedInJobs();
-      break;
-    case MainMenuActions.FIND_MATCHING_JOBS:
-      await findMatchingJobs();
+      await linkedinMenu();
       break;
     case MainMenuActions.EXIT:
       console.log("Exiting...");

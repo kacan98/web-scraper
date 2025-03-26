@@ -11,10 +11,9 @@ export enum AISource {
   OpenAi = 'openAi'
 }
 
-export const analyzeLinkedInJobs = async () => {
+export const analyzeLinkedInJobs = async (onlyJobsWithoutAnalysis = true) => {
   //for debugging 👇
   const maxJobs: number | undefined = undefined;
-  const onlyJobsWithoutAnalysis = true;
   //for debugging 👆
 
   const jobIds = await getJobIds({ onlyWithoutAnalysis: onlyJobsWithoutAnalysis }).then(r => r.slice(0, maxJobs));

@@ -9,7 +9,8 @@ import {
 import { and, asc, count, eq, exists, inArray, notExists } from 'drizzle-orm';
 
 export const saveLinkedinJobInDb = async (job: Omit<LinkedinJobPostTable, 'id'>) => {
-  return await db
+  const alreadyExists = await db.select({ id: linkedInJobPostsTable.id }).from(linkedInJobPostsTable).where(eq(linkedInJobPostsTable.linkedinId, job.linkedinId)).execute().then(r => r.length > 0);
+  const upsertResult = await db
     .insert(linkedInJobPostsTable)
     .values(job)
     .onConflictDoUpdate({
@@ -18,6 +19,8 @@ export const saveLinkedinJobInDb = async (job: Omit<LinkedinJobPostTable, 'id'>)
     })
     .returning()
     .execute().then((result) => result[0]);
+
+  return { insertedNewLine: !alreadyExists, upsertResult };
 };
 
 export const createNewJobSearch = async (job: string, location: string) => {
@@ -39,7 +42,7 @@ export const getJobById = async (jobId: number) => {
     .select()
     .from(linkedInJobPostsTable)
     .where(eq(linkedInJobPostsTable.id, jobId))
-    .execute().then(r=>r[0])
+    .execute().then(r => r[0])
 }
 
 //count of jobs

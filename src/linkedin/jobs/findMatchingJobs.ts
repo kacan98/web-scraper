@@ -6,7 +6,7 @@ import { showImportantInfoRowsInBrowser } from "./showJobsInHtmlReport";
 
 export const findMatchingJobs = async () => {
     const jobs = await getFilteredJobs({
-        includeJobsWithSkills: ["TypeScript", "Angular", "React", "C#", ".NET", "Node.js", "JavaScript"],
+        includeJobsWithSkills: ["TypeScript", "Angular", "React", "C#", ".NET", "Node.js", "JavaScript", 'x++'],
         removeJobsWithSkills: ["Java", "AWS", "Python", "Ruby", "PHP", "Kotlin", "Golang", "Scala", "Rust", "Swift", "Objective-C", "Ruby on Rails"],
         acceptableSeniorityLevels: ['mid', 'junior'],
         maxYearsOfExperienceRequired: 4,

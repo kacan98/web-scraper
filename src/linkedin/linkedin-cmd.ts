@@ -1,77 +1,67 @@
 import inquirer from "inquirer";
-import { Page } from "playwright";
-import { openPage } from "src/utils";
-import yargs from "yargs";
-import { scrapeJobsLinkedin } from "./jobs/scrape";
-import { createNewJobSearch } from "./jobs/jobs.db";
+import { analyzeLinkedInJobs } from "src/ai/ai-cmd";
+import { askGemini } from "src/ai/gemini";
+import { scrapeLinkedinJobs } from "src/linkedin/linkedin-scraping-cmd";
+import yargs from "yargs/yargs";
+import { findMatchingJobs } from "./jobs/findMatchingJobs";
 
-const options = {
-  searchTerm: {
-    describe: "What is the job description that you want to scrape?",
-    default: "Web Developer",
-  },
-  location: {
-    describe: "What is the location?",
-    default: "Stockholm",
-  },
-};
 
-export const openLinkedinCmdMenu = async () => {
-  const argv = await yargs(process.argv.slice(2))
-    .option("searchTerm", {
-      alias: "s",
-      describe: options.searchTerm.describe,
-      type: "string",
-    })
-    .option("location", {
-      alias: "l",
-      describe: "Location to search for",
-      type: "string",
-    }).argv;
+enum LinkedinOptions {
+    SCRAPE = 'Scrape_jobs',
+    AI = 'Analyze_scraped_jobs',
+    FIND_MATCHING_JOBS = 'Find_jobs_in_db',
+    EXIT = "Exit"
+}
 
-  let searchTerm = argv.searchTerm;
-  let location = argv.location;
+export const linkedinMenu = async () => {
+    const argv = await yargs(process.argv.slice(2))
+        .scriptName("LinkedIn scraper")
+        .alias("a", "action")
+        .describe("a", "What do you want to do?")
+        .choices("a", [
+            LinkedinOptions.AI,
+            LinkedinOptions.FIND_MATCHING_JOBS,
+            LinkedinOptions.SCRAPE
+        ]).argv;
 
-  if (!searchTerm) {
-    const response = await inquirer.prompt([
-      {
-        type: "input",
-        name: "searchTerm",
-        message: options.searchTerm.describe,
-        default: "Web Developer",
-      },
-    ]);
-    searchTerm = response.searchTerm;
-  }
+    let action = argv.a;
 
-  if (!location) {
-    const response = await inquirer.prompt([
-      {
-        type: "input",
-        name: "location",
-        message: options.location.describe,
-        default: "Stockholm",
-      },
-    ]);
-    location = response.location;
-  }
+    if (!action) {
+        const result = await inquirer.prompt({
+            type: "select",
+            name: "action",
+            message: "What would you like to do?",
+            choices: [
+                { name: 'Scrape jobs from LinkedIn', value: LinkedinOptions.SCRAPE },
+                { name: 'Analyze scraped jobs with AI', value: LinkedinOptions.AI },
+                { name: 'Search jobs in db that match criteria', value: LinkedinOptions.FIND_MATCHING_JOBS },
+                { name: "Exit", value: LinkedinOptions.EXIT },
+            ],
+        });
 
-  if (!searchTerm || !location) {
-    throw new Error("Job description and location are required");
-  }
+        action = result.action;
+    }
 
-  const searchId = await createNewJobSearch(searchTerm, location);
-
-  let page: Page;
-  page = await openPage();
-  // Don't need this. Never worked. Could be revived one day if I feel like it or need it.
-  // await captureAndSaveResponses(page, ScrapingSource.LinkedIn);
-  // await mockResponses(page, ScrapingSource.LinkedIn);
-
-  scrapeJobsLinkedin(page, {
-    jobDescription: searchTerm,
-    location,
-    searchId,
-    shouldLogin: true,
-  });
+    switch (action) {
+        case LinkedinOptions.SCRAPE:
+            try {
+                await scrapeLinkedinJobs();
+            } catch (error) {
+                console.error('Error scraping LinkedIn jobs:', error);
+            }
+            console.log('Trying to analyze jobs...');
+            //I know the default is true, I just wanna make sure that it's extra much true here :D
+            await analyzeLinkedInJobs(true);
+            break;
+        case LinkedinOptions.AI:
+            await analyzeLinkedInJobs();
+            await findMatchingJobs();
+            break;
+        case LinkedinOptions.FIND_MATCHING_JOBS:
+            await findMatchingJobs();
+            break;
+        case LinkedinOptions.EXIT:
+            console.log("Exiting...");
+            break;
+    }
 };

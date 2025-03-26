@@ -24,11 +24,11 @@ export const tabToNextElement = async (
 export const isValidUrl = (url: string): boolean => {
   const urlPattern = new RegExp(
     "^(https?:\\/\\/)?" + // protocol
-      "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.?)+[a-z]{2,}|" + // domain name
-      "((\\d{1,3}\\.){3}\\d{1,3}))" + // OR ip (v4) address
-      "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // port and path
-      "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
-      "(\\#[-a-z\\d_]*)?$",
+    "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.?)+[a-z]{2,}|" + // domain name
+    "((\\d{1,3}\\.){3}\\d{1,3}))" + // OR ip (v4) address
+    "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // port and path
+    "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
+    "(\\#[-a-z\\d_]*)?$",
     "i" // fragment locator
   );
   return !!urlPattern.test(url);
@@ -38,19 +38,20 @@ export const isValidUrl = (url: string): boolean => {
 export const sleepApprox = async (
   page: Page,
   ms: number,
-  ignoreLog = false
+  ignoreLog = false,
+  forWhat: string = "",
 ) => {
   const randomFactor = Math.random() * 0.4 + 0.8;
   const timeToWait = ms * randomFactor;
-  if (!ignoreLog){
-    log(`Waiting for ${timeToWait / 1000} s`);
+  if (!ignoreLog) {
+    log(`Waiting ${(timeToWait / 1000).toFixed(2)}s${forWhat ? ' for ' + forWhat : ''}`);
   }
   await page.waitForTimeout(timeToWait);
 };
 
 export const waitForever = async () => {
   log("Waiting forever");
-  return new Promise(() => {});
+  return new Promise(() => { });
 };
 
 export const randomInt = (min: number, max: number) => {

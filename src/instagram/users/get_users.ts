@@ -15,6 +15,7 @@ import {
   IGUser,
 } from "./get_users.model";
 import { saveInFile } from "src/local-file-saving";
+import { ScrapingSource } from "model";
 
 dotenv.config();
 
@@ -39,7 +40,7 @@ export const scrapeUsersFromAccount = async ({
 }) => {
   page.setDefaultTimeout(0);
 
-  await login({ page, platform: "instagram" });
+  await login({ page, platform: ScrapingSource.Instagram });
 
   await page.goto(`https://www.instagram.com/${accountToScrape}/`);
 

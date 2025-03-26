@@ -19,6 +19,7 @@ import {
 import dotenv from "dotenv";
 import { flipACoin, log, randomInt, sleepApprox } from "src/utils";
 import { errorLog } from "src/local-file-saving";
+import { ScrapingSource } from "model";
 
 dotenv.config();
 
@@ -30,7 +31,7 @@ const MIN_FOLLOWERS_TO_FOLLOWING_RATIO = 0.5;
 const IMAGE_SELECTOR = "._aagw";
 
 export const followInstagramUsers = async ({ page }: { page: Page }) => {
-  await login({ page, platform: "instagram" });
+  await login({ page, platform: ScrapingSource.Instagram });
 
   let followedTodaySoFar = (await getFollowedToday()) || 0;
   log("Followed today so far: ", followedTodaySoFar);
@@ -241,7 +242,7 @@ const likeSomePosts = async (
 
   for (const like of postsToLike) {
     log(`${like ? "Liking" : "Not liking"} this post`);
-    await sleepApprox(page, randomInt(1000, 2000), true);
+    await sleepApprox(page, randomInt(1000, 2000));
 
     if (like) {
       //double click the image to like it

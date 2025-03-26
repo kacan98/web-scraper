@@ -42,7 +42,7 @@ export const scrapeJobsLinkedin = async (
 
   await page.goto(`https://www.linkedin.com/jobs/search/`);
 
-  await search(page, jobDescription, location);
+  await search(page, jobDescription, location, 'month');
 
   await page.waitForTimeout(3000);
 
@@ -59,18 +59,20 @@ export const scrapeJobsLinkedin = async (
   }
 
   let totalCardsFound = 0;
+  let totalNewJobsFound = 0;
   let currentPage = 1;
 
   let morePagesExist = true;
   while (morePagesExist) {
-    const { cardsFound } = await scrapeAllJobsOnPage(
+    const { cardsFound, newJobsFound } = await scrapeAllJobsOnPage(
       page,
       jobCardsSelector,
       searchId
     );
     totalCardsFound += cardsFound;
+    totalNewJobsFound += newJobsFound;
     log(
-      `Found ${cardsFound} cards on this page. In total ${totalCardsFound} found so far.`
+      `Found ${cardsFound} cards on this page. In total ${totalCardsFound} found so far out of which ${totalNewJobsFound} are new.`
     );
 
     const nextPage = await findNextPageAndNavigateToItIfItExists(
@@ -86,7 +88,7 @@ export const scrapeJobsLinkedin = async (
     }
   }
 
-  log("Done. Found ", totalCardsFound, " jobs.");
+  log("Done. Found ", totalCardsFound, " cards and ", totalNewJobsFound, " new jobs.");
 };
 
 const waitForAtLeastOneSelector = async (page: Page, selectors: string[]) => {
@@ -106,9 +108,11 @@ const scrapeAllJobsOnPage = async (
   searchId: number
 ): Promise<{
   cardsFound: number;
+  newJobsFound: number;
 }> => {
   let continueScrapingJobs = true;
   let cardsFoundOnCurrentPage = 0;
+  let newJobsFound = 0;
   while (continueScrapingJobs) {
     try {
       if (cardsFoundOnCurrentPage > 0) {
@@ -128,13 +132,15 @@ const scrapeAllJobsOnPage = async (
       } catch {
         throw endOfPageError;
       }
-      log(`Found card nr ${cardsFoundOnCurrentPage}`);
-      await sleepApprox(page, 1750); // wait for the job details to load
+      await sleepApprox(page, 1500, false, 'for the job details to load');
 
       const job = await extractJob(page);
-      const { id: jobId } = await saveLinkedinJobInDb(job);
-      await markJobAsInSearch(jobId, searchId);
-      log("saved job with id", jobId);
+      const { upsertResult, insertedNewLine } = await saveLinkedinJobInDb(job);
+      if (insertedNewLine) {
+        newJobsFound++;
+      }
+      log(`${insertedNewLine ? '✨ Saved new' : "🔄 Updated"} job with id ${upsertResult.id}.`);
+      await markJobAsInSearch(upsertResult.id, searchId);
     } catch (error: any) {
       if (error === endOfPageError) {
         log(endOfPageError.message);
@@ -147,7 +153,7 @@ const scrapeAllJobsOnPage = async (
     }
   }
 
-  return { cardsFound: cardsFoundOnCurrentPage };
+  return { cardsFound: cardsFoundOnCurrentPage, newJobsFound };
 };
 
 // returns page successfully navigated to
@@ -163,7 +169,8 @@ const findNextPageAndNavigateToItIfItExists = async (
 
   if (nextPageButton) {
     await nextPageButton.click();
-    await page.waitForTimeout(3000); // wait for the next page to load
+    //sometimes failed at 300ms
+    await page.waitForTimeout(5000); // wait for the next page to load
     return nextPageNumber;
   }
   console.log("No more pages found");
@@ -235,9 +242,10 @@ async function search(
   page: Page,
   _jobDescription: string,
   _location: string,
-  loggedIn = true
+  postsMaxAge?: '24 hours' | 'week' | 'month',
+  searchManually = true,
 ) {
-  if (loggedIn) {
+  if (searchManually) {
     const elements = await tryToFindElementsFromSelectors(
       page,
       {
@@ -255,8 +263,20 @@ async function search(
     const { searchInput, searchButton, locationInput } = elements;
 
     await searchInput.fill(_jobDescription);
-    await locationInput.fill(_location);
+    //fill in location a character at a time
+    for (let i = 0; i < _location.length; i++) {
+      await locationInput.fill(_location.slice(0, i + 1));
+      await sleepApprox(page, 50);
+    }
+    //make sure that the location is found by linkedin
     await searchButton.click();
+
+    //check if the first word of the search is in the url
+    const firstWord = _jobDescription.split(" ")[0];
+    const urlRegex = new RegExp(`.*${firstWord}.*`);
+    await page.waitForURL(urlRegex, {
+      timeout: 10000
+    });
   } else {
     const jobDescription = encodeURIComponent(_jobDescription);
     const location = encodeURIComponent(_location);
@@ -264,5 +284,25 @@ async function search(
     await page.goto(
       `https://www.linkedin.com/jobs/search?keywords=${jobDescription}&location=${location}&geoId=&trk=public_jobs_jobs-search-bar_search-submit&position=1&pageNum=0`
     );
+  }
+
+  if (postsMaxAge) {
+    const maxAgeTimeout = 5000;
+    const defaultMaxAgeOptions = { timeout: maxAgeTimeout };
+    await page.locator('button:text("Date posted")').click(defaultMaxAgeOptions);
+    await sleepApprox(page, 2000);
+    await page.locator(`span:text("Past ${postsMaxAge}")`).all().then(async (options) => {
+      if (options.length === 0) {
+        throw new Error(`No option found for ${postsMaxAge}`);
+      }
+      await options[0].click(defaultMaxAgeOptions);
+    });
+    //show 123 results
+    await page.locator('button[aria-label^="Apply current filter to show"]').all().then(async (buttons) => {
+      if (buttons.length === 0) {
+        throw new Error('No button found to apply filter');
+      }
+      await buttons[0].click(defaultMaxAgeOptions);
+    });
   }
 }
