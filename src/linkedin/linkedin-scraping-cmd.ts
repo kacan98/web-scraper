@@ -1,26 +1,36 @@
 import inquirer from "inquirer";
 import { Page } from "playwright";
-import { openPage } from "src/utils";
+import { log, openPage } from "src/utils";
 import yargs from "yargs";
 import { scrapeJobsLinkedin } from "./jobs/scrape";
 import { createNewJobSearch } from "./jobs/jobs.db";
+import { getElapsedTime } from "cmd";
+
+export const karelSearchWords = [
+  'Angular',
+  'TypeScript',
+  'JavaScript',
+  'Web Developer'
+]
 
 const options = {
-  searchTerm: {
-    describe: "What is the job description that you want to scrape?",
-    default: "Web Developer",
+  searchTerms: {
+    describe: "What is the job descriptions that you want to scrape? Separate them with a ';' if there is more then one.",
+    default: "TypeScript",
   },
   location: {
     describe: "What is the location?",
-    default: "Stockholm",
+    default: "Copenhagen",
   },
 };
 
 export const scrapeLinkedinJobs = async () => {
+  const timeStarted = new Date();
+
   const argv = await yargs(process.argv.slice(2))
-    .option("searchTerm", {
+    .option("searchTerms", {
       alias: "s",
-      describe: options.searchTerm.describe,
+      describe: options.searchTerms.describe,
       type: "string",
     })
     .option("location", {
@@ -29,19 +39,19 @@ export const scrapeLinkedinJobs = async () => {
       type: "string",
     }).argv;
 
-  let searchTerm = argv.searchTerm;
+  let searchTermsUnparsed = argv.searchTerm;
   let location = argv.location;
 
-  if (!searchTerm) {
+  if (!searchTermsUnparsed) {
     const response = await inquirer.prompt([
       {
         type: "input",
-        name: "searchTerm",
-        message: options.searchTerm.describe,
-        default: "Web Developer",
+        name: "searchTerms",
+        message: options.searchTerms.describe,
+        default: options.searchTerms.default,
       },
     ]);
-    searchTerm = response.searchTerm;
+    searchTermsUnparsed = response.searchTerms;
   }
 
   if (!location) {
@@ -50,28 +60,41 @@ export const scrapeLinkedinJobs = async () => {
         type: "input",
         name: "location",
         message: options.location.describe,
-        default: "Stockholm",
+        default: options.location.default,
       },
     ]);
     location = response.location;
   }
 
-  if (!searchTerm || !location) {
+  if (!searchTermsUnparsed || !location) {
     throw new Error("Job description and location are required");
   }
 
-  const searchId = await createNewJobSearch(searchTerm, location);
+  //check if searchTermsUnparsed is string
+  if (typeof searchTermsUnparsed !== "string") {
+    throw new Error("searchTermsUnparsed must be a string");
+  }
 
-  let page: Page;
-  page = await openPage();
-  // Don't need this. Never worked. Could be revived one day if I feel like it or need it.
-  // await captureAndSaveResponses(page, ScrapingSource.LinkedIn);
-  // await mockResponses(page, ScrapingSource.LinkedIn);
+  const searchTerms = searchTermsUnparsed.split(";");
 
-  await scrapeJobsLinkedin(page, {
-    jobDescription: searchTerm,
-    location,
-    searchId,
-    shouldLogin: true,
-  });
+  log('I will search for these terms:', searchTerms.join(', '), ' in ' + location);
+
+  for (let searchTerm of searchTerms) {
+    const searchId = await createNewJobSearch(searchTerm, location);
+
+    let page: Page;
+    page = await openPage();
+    // Don't need this. Never worked. Could be revived one day if I feel like it or need it.
+    // await captureAndSaveResponses(page, ScrapingSource.LinkedIn);
+    // await mockResponses(page, ScrapingSource.LinkedIn);
+
+    await scrapeJobsLinkedin(page, {
+      jobDescription: searchTerm,
+      location,
+      searchId,
+      shouldLogin: true,
+    });
+  }
+
+  console.log(`Scraping completed in ${getElapsedTime(timeStarted)}`);
 };

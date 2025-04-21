@@ -8,7 +8,7 @@ export const findMatchingJobs = async () => {
     const jobs = await getFilteredJobs({
         includeJobsWithSkills: ["TypeScript", "Angular", "React", "C#", ".NET", "Node.js", "JavaScript", 'x++'],
         removeJobsWithSkills: ["Java", "AWS", "Python", "Ruby", "PHP", "Kotlin", "Golang", "Scala", "Rust", "Swift", "Objective-C", "Ruby on Rails"],
-        acceptableSeniorityLevels: ['mid', 'junior'],
+        acceptableSeniorityLevels: ['mid', 'junior', 'senior'],
         maxYearsOfExperienceRequired: 4,
         includeInternships: false,
         acceptablePosition: ['frontend', 'full-stack'],

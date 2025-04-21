@@ -107,6 +107,24 @@ export const jobsWithSkillsView = linkedinSchema.view("jobs_with_skills_view").a
   return query;
 });
 
+export const jobsInSearchView = linkedinSchema.view("jobs_in_search_view").as((qb) => {
+  const query = qb
+    .select({
+      post_id: linkedInJobPostsTable.id,
+      post_title: linkedInJobPostsTable.title,
+      linkedin_id: linkedInJobPostsTable.linkedinId,
+      search_id: jobPostInSearchTable.jobSearchId,
+      search_keywords: linkedinJobSearchTable.job,
+      search_location: linkedinJobSearchTable.location,
+      search_date: linkedinJobSearchTable.date,
+    })
+    .from(linkedInJobPostsTable)
+    .leftJoin(jobPostInSearchTable, eq(jobPostInSearchTable.jobId, linkedInJobPostsTable.id))
+    .leftJoin(linkedinJobSearchTable, eq(linkedinJobSearchTable.id, jobPostInSearchTable.jobSearchId));
+
+  return query;
+})
+
 export type Skill = typeof skillTable.$inferInsert;
 export type SkillJobMappingTable = typeof skillJobMappingTable.$inferInsert;
 export type LinkedinJobPostTable = typeof linkedInJobPostsTable.$inferInsert & { id: number };

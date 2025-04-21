@@ -90,7 +90,7 @@ export async function getJobIds({
       return result.count;
     })
   } else {
-    top = top ?? 50;
+    top = top ?? 999999999999999;
     skip = skip ?? 0;
 
     return actualQuery

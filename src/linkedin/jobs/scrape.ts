@@ -128,10 +128,15 @@ const scrapeAllJobsOnPage = async (
       cardsFoundOnCurrentPage++;
 
       try {
-        await nextCard.click({ timeout: 5000 });
+        await nextCard.click({ timeout: 15000 });
       } catch {
-        throw endOfPageError;
+        if (cardsFoundOnCurrentPage > 1) {
+          throw endOfPageError;
+        } else {
+          throw new Error('I only managed to find ' + cardsFoundOnCurrentPage + ' cards and then something went wrong.');
+        }
       }
+
       await sleepApprox(page, 1500, false, 'for the job details to load');
 
       const job = await extractJob(page);
@@ -139,7 +144,7 @@ const scrapeAllJobsOnPage = async (
       if (insertedNewLine) {
         newJobsFound++;
       }
-      log(`${insertedNewLine ? '✨ Saved new' : "🔄 Updated"} job with id ${upsertResult.id}.`);
+      log(`${insertedNewLine ? '✨ Saved new' : "🔄 Updated"} job with id ${upsertResult.id}. (This page: New: ${newJobsFound}, Updated: ${cardsFoundOnCurrentPage - newJobsFound})`);
       await markJobAsInSearch(upsertResult.id, searchId);
     } catch (error: any) {
       if (error === endOfPageError) {
@@ -287,22 +292,26 @@ async function search(
   }
 
   if (postsMaxAge) {
-    const maxAgeTimeout = 5000;
-    const defaultMaxAgeOptions = { timeout: maxAgeTimeout };
-    await page.locator('button:text("Date posted")').click(defaultMaxAgeOptions);
-    await sleepApprox(page, 2000);
-    await page.locator(`span:text("Past ${postsMaxAge}")`).all().then(async (options) => {
-      if (options.length === 0) {
-        throw new Error(`No option found for ${postsMaxAge}`);
-      }
-      await options[0].click(defaultMaxAgeOptions);
-    });
-    //show 123 results
-    await page.locator('button[aria-label^="Apply current filter to show"]').all().then(async (buttons) => {
-      if (buttons.length === 0) {
-        throw new Error('No button found to apply filter');
-      }
-      await buttons[0].click(defaultMaxAgeOptions);
-    });
+    try {
+      const maxAgeTimeout = 5000;
+      const defaultMaxAgeOptions = { timeout: maxAgeTimeout };
+      await page.locator('button:text("Date posted")').click(defaultMaxAgeOptions);
+      await sleepApprox(page, 2000);
+      await page.locator(`span:text("Past ${postsMaxAge}")`).all().then(async (options) => {
+        if (options.length === 0) {
+          throw new Error(`No option found for ${postsMaxAge}`);
+        }
+        await options[0].click(defaultMaxAgeOptions);
+      });
+      //show 123 results
+      await page.locator('button[aria-label^="Apply current filter to show"]').all().then(async (buttons) => {
+        if (buttons.length === 0) {
+          throw new Error('No button found to apply filter');
+        }
+        await buttons[0].click(defaultMaxAgeOptions);
+      });
+    } catch (error) {
+      console.error('something went wrong with selecting the max age', error)
+    }
   }
 }

@@ -1,9 +1,29 @@
+import { dbAvailable } from "db";
 import inquirer from "inquirer";
 import { ScrapingSource } from "model";
 import { openInstagramCmdMenu } from "src/instagram/instagram-cmd";
 import { linkedinMenu } from "src/linkedin/linkedin-cmd";
-import { scrapeLinkedinJobs } from "src/linkedin/linkedin-scraping-cmd";
 import yargs from "yargs/yargs";
+
+export const processStarted = new Date();
+
+export const getElapsedTime = (since: Date = processStarted) => {
+  const now = new Date(since);
+
+  const elapsedTime = now.getTime() - processStarted.getTime();
+  const seconds = Math.floor((elapsedTime / 1000) % 60);
+  const minutes = Math.floor((elapsedTime / (1000 * 60)) % 60);
+  const hours = Math.floor((elapsedTime / (1000 * 60 * 60)) % 24);
+  const days = Math.floor(elapsedTime / (1000 * 60 * 60 * 24));
+
+  let result = `Elapsed time: `;
+  if (days > 0) result += `${days} days, `;
+  if (hours > 0) result += `${hours} hours, `;
+  if (minutes > 0) result += `${minutes} minutes, `;
+  if (seconds > 0) result += `${seconds} seconds`;
+
+  return result;
+}
 
 enum MainMenuActions {
   INSTAGRAM = ScrapingSource.Instagram,
@@ -12,6 +32,11 @@ enum MainMenuActions {
 }
 
 const mainMenu = async () => {
+  if (!dbAvailable()) {
+    console.error("Database is not available. Maybe Docker desktop is not running?");
+    return;
+  }
+
   const argv = await yargs(process.argv.slice(2))
     .scriptName("Krels scraper/LinkedIn jobs thing")
     .alias("p", "action")

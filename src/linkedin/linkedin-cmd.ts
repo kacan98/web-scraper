@@ -4,6 +4,7 @@ import { askGemini } from "src/ai/gemini";
 import { scrapeLinkedinJobs } from "src/linkedin/linkedin-scraping-cmd";
 import yargs from "yargs/yargs";
 import { findMatchingJobs } from "./jobs/findMatchingJobs";
+import { getElapsedTime } from "cmd";
 
 
 enum LinkedinOptions {
@@ -19,9 +20,9 @@ export const linkedinMenu = async () => {
         .alias("a", "action")
         .describe("a", "What do you want to do?")
         .choices("a", [
+            LinkedinOptions.SCRAPE,
             LinkedinOptions.AI,
             LinkedinOptions.FIND_MATCHING_JOBS,
-            LinkedinOptions.SCRAPE
         ]).argv;
 
     let action = argv.a;
@@ -32,9 +33,9 @@ export const linkedinMenu = async () => {
             name: "action",
             message: "What would you like to do?",
             choices: [
-                { name: 'Scrape jobs from LinkedIn', value: LinkedinOptions.SCRAPE },
-                { name: 'Analyze scraped jobs with AI', value: LinkedinOptions.AI },
-                { name: 'Search jobs in db that match criteria', value: LinkedinOptions.FIND_MATCHING_JOBS },
+                { name: 'Step 1) Scrape jobs from LinkedIn', value: LinkedinOptions.SCRAPE },
+                { name: 'Step 2) Analyze scraped jobs with AI', value: LinkedinOptions.AI },
+                { name: 'Step 3) Search jobs in db that match criteria', value: LinkedinOptions.FIND_MATCHING_JOBS },
                 { name: "Exit", value: LinkedinOptions.EXIT },
             ],
         });
@@ -44,14 +45,20 @@ export const linkedinMenu = async () => {
 
     switch (action) {
         case LinkedinOptions.SCRAPE:
+            const timeStarted = new Date();
+
             try {
                 await scrapeLinkedinJobs();
             } catch (error) {
                 console.error('Error scraping LinkedIn jobs:', error);
             }
+            
             console.log('Trying to analyze jobs...');
             //I know the default is true, I just wanna make sure that it's extra much true here :D
             await analyzeLinkedInJobs(true);
+            await findMatchingJobs();
+
+            console.log(`Scraping completed in ${getElapsedTime(timeStarted)}`);
             break;
         case LinkedinOptions.AI:
             await analyzeLinkedInJobs();

@@ -5,6 +5,7 @@ import {
 } from "./gemini";
 import { geminiModels } from "./gemini.model";
 import { insertAIAnalysis } from "src/linkedin/jobs/ai-job-analysis.db";
+import Bottleneck from "bottleneck";
 
 export enum AISource {
   Gemini = 'gemini',
@@ -12,16 +13,13 @@ export enum AISource {
 }
 
 export const analyzeLinkedInJobs = async (onlyJobsWithoutAnalysis = true) => {
-  //for debugging 👇
+  // For debugging
   const maxJobs: number | undefined = undefined;
-  //for debugging 👆
-
   const jobIds = await getJobIds({ onlyWithoutAnalysis: onlyJobsWithoutAnalysis }).then(r => r.slice(0, maxJobs));
   const jobsToAnalyze = jobIds.length;
-  
+
   if (jobsToAnalyze === 0) {
     console.log('No jobs to process. Exiting...');
-
     return;
   }
 
@@ -31,67 +29,61 @@ export const analyzeLinkedInJobs = async (onlyJobsWithoutAnalysis = true) => {
   const modelProperties = geminiModels[model];
   const limitPerMinute = modelProperties.requestsPerMinute;
 
-  let index = 0;
-  const requestTimestamps: number[] = []; // Tracks timestamps of recent requests
+  // Configure rate limiter
+  const minTime = 60000 / limitPerMinute; // Time between requests in ms
+  const maxConcurrent = 5; // Adjust based on API concurrency limits if specified
 
-  for (let jobId of jobIds) {
-    logProgress(index, jobsToAnalyze, 1, "jobs");
+  const limiter = new Bottleneck({
+    minTime: minTime,
+    maxConcurrent: maxConcurrent
+  });
 
-    // Check rate limit using sliding window
-    const now = Date.now();
-    // Remove timestamps older than 60 seconds
-    while (requestTimestamps.length > 0 && now - requestTimestamps[0] >= 60000) {
-      requestTimestamps.shift();
-    }
+  let completed = 0;
+  const total = jobIds.length;
 
-    // If we've hit the limit, wait until the oldest request is 60s old
-    if (requestTimestamps.length >= limitPerMinute) {
-      const timeToWait = 60000 - (now - requestTimestamps[0]);
-      if (timeToWait > 0) {
-        await new Promise(resolve => setTimeout(resolve, timeToWait));
+  // Process all jobs concurrently
+  const processJob = async (jobId: number) => {
+    try {
+      const job = await getJobById(jobId);
+      const jobInfo = await limiter.schedule(() => extractJobInfoWithGemini(job, modelProperties.apiName));
+
+      // Validate mandatory fields
+      if (
+        !jobInfo.postLanguage ||
+        !jobInfo.jobSummary ||
+        !jobInfo.skillsRequired ||
+        !jobInfo.skillsOptional ||
+        jobInfo.isInternship === undefined
+      ) {
+        throw new Error('Something is wrong with the data returned from the AI');
       }
-      // Recheck after waiting
-      continue;
+
+      await insertAIAnalysis(job.id, {
+        // Required fields
+        postLanguage: jobInfo.postLanguage,
+        jobSummary: jobInfo.jobSummary,
+        skillsRequired: jobInfo.skillsRequired,
+        skillsOptional: jobInfo.skillsOptional,
+        isInternship: jobInfo.isInternship,
+        // Optional fields
+        yearsOfExperienceExpected: jobInfo.yearsOfExperienceExpected ?? undefined,
+        numberOfApplicants: jobInfo.numberOfApplicants ?? undefined,
+        seniorityLevel: jobInfo.seniorityLevel ?? undefined,
+        decelopmentSide: jobInfo.decelopmentSide ?? undefined,
+        companyIndustry: jobInfo.companyIndustry ?? undefined,
+        workModel: jobInfo.workModel ?? undefined,
+        salary: jobInfo.salary ?? undefined,
+        postedDaysAgo: jobInfo.postedDaysAgo ?? undefined,
+        city: jobInfo.city ?? undefined
+      });
+    } catch (error) {
+      console.error(`Error processing job ${jobId}:`, error);
+    } finally {
+      completed++;
+      logProgress(completed, total, 1, 'jobs processed with AI');
     }
+  };
 
-    const job = await getJobById(jobId);
-    const jobInfo = await extractJobInfoWithGemini(job, modelProperties.apiName);
-
-    //We don't 100% trust the AI so check that the mandatory fields are there:
-    if (
-      !jobInfo.postLanguage ||
-      !jobInfo.jobSummary ||
-      !jobInfo.skillsRequired ||
-      !jobInfo.skillsOptional ||
-      jobInfo.isInternship === undefined
-    ) {
-      throw new Error('Something is wrong with the data returned from the AI');
-    }
-
-    await insertAIAnalysis(job.id, {
-      // required
-      postLanguage: jobInfo.postLanguage,
-      jobSummary: jobInfo.jobSummary,
-      skillsRequired: jobInfo.skillsRequired,
-      skillsOptional: jobInfo.skillsOptional,
-      isInternship: jobInfo.isInternship,
-
-      // optional
-      yearsOfExperienceExpected: jobInfo.yearsOfExperienceExpected ?? undefined,
-      numberOfApplicants: jobInfo.numberOfApplicants ?? undefined,
-      seniorityLevel: jobInfo.seniorityLevel ?? undefined,
-      decelopmentSide: jobInfo.decelopmentSide ?? undefined,
-      companyIndustry: jobInfo.companyIndustry ?? undefined,
-      workModel: jobInfo.workModel ?? undefined,
-      salary: jobInfo.salary ?? undefined,
-      postedDaysAgo: jobInfo.postedDaysAgo ?? undefined,
-      city: jobInfo.city ?? undefined
-    });
-
-    // Record the request timestamp and move to next job
-    requestTimestamps.push(Date.now());
-    index++;
-  }
-
-  console.log('Done ✅ - All jobs have been processed.');
+  await Promise.all(jobIds.map(processJob));
+  console.log('Done - All jobs have been processed.');
 };
