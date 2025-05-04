@@ -77,7 +77,7 @@ export const scrapeLinkedinJobs = async () => {
 
   const searchTerms = searchTermsUnparsed.split(";");
 
-  log('I will search for these terms:', searchTerms.join(', '), ' in ' + location);
+  log(`I will search for "${searchTerms.join(', ')}" in ${location}`);
 
   for (let searchTerm of searchTerms) {
     const searchId = await createNewJobSearch(searchTerm, location);

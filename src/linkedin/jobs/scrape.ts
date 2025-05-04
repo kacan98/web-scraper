@@ -42,7 +42,7 @@ export const scrapeJobsLinkedin = async (
 
   await page.goto(`https://www.linkedin.com/jobs/search/`);
 
-  await search(page, jobDescription, location, 'month');
+  await search(page, jobDescription, location, 'week');
 
   await page.waitForTimeout(3000);
 
@@ -67,7 +67,8 @@ export const scrapeJobsLinkedin = async (
     const { cardsFound, newJobsFound } = await scrapeAllJobsOnPage(
       page,
       jobCardsSelector,
-      searchId
+      searchId,
+      totalNewJobsFound
     );
     totalCardsFound += cardsFound;
     totalNewJobsFound += newJobsFound;
@@ -105,7 +106,8 @@ const endOfPageError = new Error('We likely got to the end of the page.');
 const scrapeAllJobsOnPage = async (
   page: Page,
   cardSelector: string,
-  searchId: number
+  searchId: number,
+  newJobsFoundBefore: number
 ): Promise<{
   cardsFound: number;
   newJobsFound: number;
@@ -144,7 +146,7 @@ const scrapeAllJobsOnPage = async (
       if (insertedNewLine) {
         newJobsFound++;
       }
-      log(`${insertedNewLine ? '✨ Saved new' : "🔄 Updated"} job with id ${upsertResult.id}. (This page: New: ${newJobsFound}, Updated: ${cardsFoundOnCurrentPage - newJobsFound})`);
+      log(`${insertedNewLine ? '✨ Saved new' : "🔄 Updated"} job with id ${upsertResult.id}. (This page new: ${newJobsFound}, This page updated: ${cardsFoundOnCurrentPage - newJobsFound}), total new: ${newJobsFound + newJobsFoundBefore}`);
       await markJobAsInSearch(upsertResult.id, searchId);
     } catch (error: any) {
       if (error === endOfPageError) {
@@ -243,73 +245,60 @@ export const linkedinJobSelectors = {
   ],
 };
 
+const postAgeMap = {
+  '24 hours': 86400,
+  'week': 604800,
+  'month': 2592000,
+}
+
 async function search(
   page: Page,
   _jobDescription: string,
   _location: string,
-  postsMaxAge?: '24 hours' | 'week' | 'month',
-  searchManually = true,
+  postsMaxAge?: keyof typeof postAgeMap
 ) {
-  if (searchManually) {
-    const elements = await tryToFindElementsFromSelectors(
-      page,
-      {
-        searchInput: linkedinJobSelectors.searchInput,
-        searchButton: linkedinJobSelectors.buttonSearch,
-        locationInput: linkedinJobSelectors.locationInput,
-      },
-      {
-        allOrNothing: true,
-      }
-    );
-
-    if (!elements) throw new Error("Search elements not found");
-
-    const { searchInput, searchButton, locationInput } = elements;
-
-    await searchInput.fill(_jobDescription);
-    //fill in location a character at a time
-    for (let i = 0; i < _location.length; i++) {
-      await locationInput.fill(_location.slice(0, i + 1));
-      await sleepApprox(page, 50);
+  const elements = await tryToFindElementsFromSelectors(
+    page,
+    {
+      searchInput: linkedinJobSelectors.searchInput,
+      searchButton: linkedinJobSelectors.buttonSearch,
+      locationInput: linkedinJobSelectors.locationInput,
+    },
+    {
+      allOrNothing: true,
     }
-    //make sure that the location is found by linkedin
-    await searchButton.click();
+  );
 
-    //check if the first word of the search is in the url
-    const firstWord = _jobDescription.split(" ")[0];
-    const urlRegex = new RegExp(`.*${firstWord}.*`);
-    await page.waitForURL(urlRegex, {
-      timeout: 10000
-    });
-  } else {
-    const jobDescription = encodeURIComponent(_jobDescription);
-    const location = encodeURIComponent(_location);
-    //go to https://www.linkedin.com/jobs/search?keywords=Angular&location=Stockholm&geoId=&trk=public_jobs_jobs-search-bar_search-submit&position=1&pageNum=0
-    await page.goto(
-      `https://www.linkedin.com/jobs/search?keywords=${jobDescription}&location=${location}&geoId=&trk=public_jobs_jobs-search-bar_search-submit&position=1&pageNum=0`
-    );
+  if (!elements) throw new Error("Search elements not found");
+
+  const { searchInput, searchButton, locationInput } = elements;
+
+  await searchInput.fill(_jobDescription);
+  //fill in location a character at a time
+  for (let i = 0; i < _location.length; i++) {
+    await locationInput.fill(_location.slice(0, i + 1));
+    await sleepApprox(page, 50);
   }
+  //make sure that the location is found by linkedin
+  await searchButton.click();
+
+  //check if the first word of the search is in the url
+  const firstWord = _jobDescription.split(" ")[0];
+  const urlRegex = new RegExp(`.*${firstWord}.*`);
+  await page.waitForURL(urlRegex, {
+    timeout: 10000
+  });
+
 
   if (postsMaxAge) {
     try {
-      const maxAgeTimeout = 5000;
+      const maxAgeTimeout = 30000;
       const defaultMaxAgeOptions = { timeout: maxAgeTimeout };
-      await page.locator('button:text("Date posted")').click(defaultMaxAgeOptions);
-      await sleepApprox(page, 2000);
-      await page.locator(`span:text("Past ${postsMaxAge}")`).all().then(async (options) => {
-        if (options.length === 0) {
-          throw new Error(`No option found for ${postsMaxAge}`);
-        }
-        await options[0].click(defaultMaxAgeOptions);
-      });
-      //show 123 results
-      await page.locator('button[aria-label^="Apply current filter to show"]').all().then(async (buttons) => {
-        if (buttons.length === 0) {
-          throw new Error('No button found to apply filter');
-        }
-        await buttons[0].click(defaultMaxAgeOptions);
-      });
+
+      // Build the query parameters directly
+      // Note: using 'f_TPR=r604800' for an example of "Past week" filtering 
+      const newUrl = `${page.url()}&f_TPR=r${postAgeMap[postsMaxAge]}`;
+      await page.goto(newUrl, defaultMaxAgeOptions);
     } catch (error) {
       console.error('something went wrong with selecting the max age', error)
     }

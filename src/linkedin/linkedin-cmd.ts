@@ -3,14 +3,16 @@ import { analyzeLinkedInJobs } from "src/ai/ai-cmd";
 import { askGemini } from "src/ai/gemini";
 import { scrapeLinkedinJobs } from "src/linkedin/linkedin-scraping-cmd";
 import yargs from "yargs/yargs";
-import { findMatchingJobs } from "./jobs/findMatchingJobs";
+import { findMatchingJobsForKarel } from "./jobs/findMatchingJobs";
 import { getElapsedTime } from "cmd";
+import { findRatedJobsForKarel } from "./jobs/findRatedJobs";
 
 
 enum LinkedinOptions {
     SCRAPE = 'Scrape_jobs',
     AI = 'Analyze_scraped_jobs',
     FIND_MATCHING_JOBS = 'Find_jobs_in_db',
+    RATE_JOBS = 'Rate jobs',
     EXIT = "Exit"
 }
 
@@ -35,7 +37,8 @@ export const linkedinMenu = async () => {
             choices: [
                 { name: 'Step 1) Scrape jobs from LinkedIn', value: LinkedinOptions.SCRAPE },
                 { name: 'Step 2) Analyze scraped jobs with AI', value: LinkedinOptions.AI },
-                { name: 'Step 3) Search jobs in db that match criteria', value: LinkedinOptions.FIND_MATCHING_JOBS },
+                { name: 'Step 3A) Find jobs for Karel based on criteria', value: LinkedinOptions.FIND_MATCHING_JOBS },
+                { name: 'Step 3B) Find rated jobs for Karel based on criteria', value: LinkedinOptions.RATE_JOBS },
                 { name: "Exit", value: LinkedinOptions.EXIT },
             ],
         });
@@ -56,17 +59,21 @@ export const linkedinMenu = async () => {
             console.log('Trying to analyze jobs...');
             //I know the default is true, I just wanna make sure that it's extra much true here :D
             await analyzeLinkedInJobs(true);
-            await findMatchingJobs();
+            await findMatchingJobsForKarel();
 
             console.log(`Scraping completed in ${getElapsedTime(timeStarted)}`);
             break;
         case LinkedinOptions.AI:
             await analyzeLinkedInJobs();
-            await findMatchingJobs();
+            await findMatchingJobsForKarel();
             break;
         case LinkedinOptions.FIND_MATCHING_JOBS:
-            await findMatchingJobs();
+            await findMatchingJobsForKarel();
             break;
+        case LinkedinOptions.RATE_JOBS:
+            await findRatedJobsForKarel();
+            break;
+
         case LinkedinOptions.EXIT:
             console.log("Exiting...");
             break;

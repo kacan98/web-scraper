@@ -4,7 +4,7 @@ import { and, desc, eq, exists, inArray, isNull, lt, not, or } from "drizzle-orm
 import { ilike } from "drizzle-orm";
 import { showImportantInfoRowsInBrowser } from "./showJobsInHtmlReport";
 
-export const findMatchingJobs = async () => {
+export const findMatchingJobsForKarel = async () => {
     const jobs = await getFilteredJobs({
         includeJobsWithSkills: ["TypeScript", "Angular", "React", "C#", ".NET", "Node.js", "JavaScript", 'x++'],
         removeJobsWithSkills: ["Java", "AWS", "Python", "Ruby", "PHP", "Kotlin", "Golang", "Scala", "Rust", "Swift", "Objective-C", "Ruby on Rails"],
@@ -17,7 +17,6 @@ export const findMatchingJobs = async () => {
     console.log('Found jobs: ', jobs.length);
     const importantInfoRows = (jobs.map((j) => {
         return {
-            url: `https://www.linkedin.com/jobs/search/?currentJobId=${j.job_posts.linkedinId}`,
             title: j.job_posts.title,
             location: j.job_posts.location,
             skills: j.job_posts.skills,
@@ -51,7 +50,7 @@ export function skillSubQuery(skills: string[]) {
 export function getFilteredJobs({
     includeJobsWithSkills,
     removeJobsWithSkills,
-    maxDaysOld = 30,
+    maxDaysOld = 7,
     maxYearsOfExperienceRequired: maxYearsOfExperience,
     includeInternships = false,
     acceptableSeniorityLevels = ['lead', 'senior', 'mid', 'junior'],
@@ -94,7 +93,8 @@ export function getFilteredJobs({
                 acceptablePosition.length ? or(
                     inArray(jobAiAnalysisTable.decelopmentSide, acceptablePosition),
                     isNull(jobAiAnalysisTable.decelopmentSide)
-                ) : undefined
+                ) : undefined,
+                maxDaysOld ? lt(jobAiAnalysisTable.jobPosted, new Date(Date.now() - maxDaysOld * 24 * 60 * 60 * 1000).toISOString()) : undefined,
             )
         ).orderBy(desc(jobAiAnalysisTable.jobPosted))
 
