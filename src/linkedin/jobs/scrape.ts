@@ -236,7 +236,7 @@ export const linkedinJobSelectors = {
       ".job-details-jobs-unified-top-card__primary-description-container",
     ],
     jobDetails: ["#job-details"],
-    skills: [".job-details-how-you-match__skills-section-descriptive-skill"],
+    skills: ["#how-you-match-card-container", ".job-details-how-you-match__skills-section-descriptive-skill"],
   },
   jobCard: [
     'a.job-card-container__link[href*="/jobs/view/"]',

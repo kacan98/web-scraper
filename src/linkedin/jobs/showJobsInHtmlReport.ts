@@ -16,6 +16,12 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
       url: `https://www.linkedin.com/jobs/search/?currentJobId=${row.linkedinId}`
     }
   });
+  
+  if(importantInfoRows.length === 0) {
+    console.log('No jobs found')
+    return
+  }
+
   const columnNames = Object.keys(importantInfoRows[0]);
   const getColumns = (row: ImportantInfoRowWithUrl) => {
     const columns = Object.entries(row).map(([key, value]) => {

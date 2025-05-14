@@ -32,7 +32,7 @@ async function getRatedJobIds(mySkills: Record<string, number>) {
     .select({
       id: linkedInJobPostsTable.id,
       linkedinId: linkedInJobPostsTable.linkedinId,
-      rating: sql`
+      rating: sql<number>`
       SUM(CASE WHEN ${skillTable.name} 
       IN (SELECT json_object_keys(${mySkillsJson}::json))
       THEN ((${mySkillsJson}::json)->>${skillTable.name})::int ELSE 0 END) - 10 * SUM(CASE WHEN ${skillTable.name}
@@ -47,7 +47,7 @@ async function getRatedJobIds(mySkills: Record<string, number>) {
       workModel: jobAiAnalysisTable.workModel,
       jobSumary: jobAiAnalysisTable.jobSummary,
       jobPosted: jobAiAnalysisTable.jobPosted,
-      requiredSkills: sql`array_agg(${skillTable.name})`.as("required_skills"),
+      requiredSkills: sql<string>`array_agg(${skillTable.name})`.as("required_skills"),
 
     })
     .from(linkedInJobPostsTable)

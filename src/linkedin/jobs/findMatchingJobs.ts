@@ -25,7 +25,8 @@ export const findMatchingJobsForKarel = async () => {
             decelopmentSide: j.job_ai_analysis?.decelopmentSide,
             workModel: j.job_ai_analysis?.workModel,
             jobSumary: j.job_ai_analysis?.jobSummary,
-            jobPosted: j.job_ai_analysis?.jobPosted
+            jobPosted: j.job_ai_analysis?.jobPosted,
+            linkedinId: j.job_posts.linkedinId,
         }
     }));
 

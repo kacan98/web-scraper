@@ -33,7 +33,7 @@ enum MainMenuActions {
 
 const mainMenu = async () => {
   if (!dbAvailable()) {
-    console.error("Database is not available. Maybe Docker desktop is not running?");
+    throw new Error("Database is not available. Maybe Docker desktop is not running?");
     return;
   }
 

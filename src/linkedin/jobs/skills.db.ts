@@ -1,6 +1,6 @@
 import { db } from 'db';
 import { skillTable, skillJobMappingTable } from 'db/schema/linkedin/linkedin-schema';
-import { inArray } from 'drizzle-orm';
+import { desc, eq, inArray, sql } from 'drizzle-orm';
 
 export type DatabaseType = typeof db;
 export type TransactionType = Parameters<Parameters<DatabaseType['transaction']>[0]>[0];
@@ -59,4 +59,18 @@ export const insertJobSkillMappings = async (jobId: number, skillIds: number[], 
                 })))
         .onConflictDoNothing()
         .execute();
+}
+
+export const extractSkillFrequency = async (): Promise<{ name: string, count: number }[]> => {
+    const skills = await db
+        .select({
+            name: skillTable.name,
+            count: sql<number>`COUNT(*)`.as('count'),
+        })
+        .from(skillTable)
+        .leftJoin(skillJobMappingTable, eq(skillJobMappingTable.skillId, skillTable.id))
+        .groupBy(skillTable.name)
+        .orderBy(({count})=> desc(count))
+
+    return skills
 }
