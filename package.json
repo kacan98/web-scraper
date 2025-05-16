@@ -4,11 +4,11 @@
   "main": "index.js",
   "scripts": {
     "start": "npm run docker-up && tsx cmd.ts",
-    "faster-less-safe-start": "tsx cmd.ts",
+    "start-no-docker": "tsx cmd.ts",
     "help": "npm run faster-less-safe-start -- --help",
     "docker-up": "docker-compose up -d",
     "update-db-with-drizzle-schema": "npx drizzle-kit push --config ./drizzle.config.ts",
-    "scrape-jobs": "npm run start -- --p LinkedIn --a Scrape_jobs --l Copenhagen --s TypeScript --m 86400"
+    "scrape-jobs-no-docker": "tsx cmd.ts --p LinkedIn --a Scrape_jobs --l Copenhagen --s TypeScript --m 86400"
   },
   "keywords": [],
   "author": "",
