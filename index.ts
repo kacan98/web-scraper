@@ -1,10 +1,11 @@
+import { DEV_MODE } from "envVars";
 import { chromium } from "playwright";
 
 async function main() {
   // Launch a new instance of a Chromium browser with headless mode
   // disabled for visibility
   const browser = await chromium.launch({
-    headless: false,
+    headless: !DEV_MODE,
   });
 
   // Create a new Playwright context to isolate browsing session

@@ -1,3 +1,4 @@
+import { DEV_MODE } from "envVars";
 import { chromium, Page } from "playwright";
 
 export const tabToNextElement = async (
@@ -65,7 +66,7 @@ export const flipACoin = (probabilityForSuccess: number = 0.5) => {
 };
 
 export const openPage = async (): Promise<Page> => {
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch({ headless: !DEV_MODE });
   const page = await browser.newPage();
   return page;
 };

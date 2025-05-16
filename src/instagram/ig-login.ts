@@ -4,6 +4,7 @@ import { BrowserContext, chromium, Cookie, Page } from "playwright";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { ScrapingSource } from "model";
+import { DEV_MODE } from "envVars";
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -60,7 +61,7 @@ export const getCookies = async ({
   }
 
   if (!cookies || cookies.length < 4) {
-    const browser = await chromium.launch({ headless: false });
+    const browser = await chromium.launch({ headless: !DEV_MODE });
     const context = await browser.newContext();
     const page = await context.newPage();
 
