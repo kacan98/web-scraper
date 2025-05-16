@@ -8,7 +8,7 @@
     "help": "npm run faster-less-safe-start -- --help",
     "docker-up": "docker-compose up -d",
     "update-db-with-drizzle-schema": "npx drizzle-kit push --config ./drizzle.config.ts",
-    "scrape-jobs-remote": "npx playwright install & tsx cmd.ts --p LinkedIn --a Scrape_jobs --l Copenhagen --s TypeScript --m 86400"
+    "scrape-jobs-remote": "npx playwright install && tsx cmd.ts --p LinkedIn --a Scrape_jobs --l Copenhagen --s TypeScript --m 86400"
   },
   "keywords": [],
   "author": "",
