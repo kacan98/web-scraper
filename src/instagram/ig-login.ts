@@ -21,7 +21,7 @@ if (!LINKEDIN_LOGIN || !LINKEDIN_PASSWORD)
 
 const platformSpecifics = {
   [ScrapingSource.Instagram]: {
-    pathToCookies: "../instagram-cookies.json",
+    pathToCookies: "../../instagram-cookies.json",
     loginUrl: "https://www.instagram.com",
     selectors: {
       afterNavigateButton: 'text="Allow all cookies"',
@@ -33,7 +33,7 @@ const platformSpecifics = {
     username: IG_LOGIN,
   },
   [ScrapingSource.LinkedIn]: {
-    pathToCookies: "../linkedin-cookies.json",
+    pathToCookies: "../../linkedin-cookies.json",
     loginUrl: "https://www.linkedin.com",
     selectors: {
       afterNavigateButton:
