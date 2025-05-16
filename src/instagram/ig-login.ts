@@ -11,13 +11,9 @@ const __dirname = dirname(__filename);
 
 const IG_LOGIN = process.env.IG_LOGIN;
 const IG_PASSWORD = process.env.IG_PASSWORD;
-if (!IG_LOGIN || !IG_PASSWORD)
-  throw new Error("IG_USERNAME or IG_PASSWORD not set");
 
 const LINKEDIN_LOGIN = process.env.LINKEDIN_LOGIN;
 const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD;
-if (!LINKEDIN_LOGIN || !LINKEDIN_PASSWORD)
-  throw new Error("LINKEDIN_USERNAME or LINKEDIN_PASSWORD not set");
 
 const platformSpecifics = {
   [ScrapingSource.Instagram]: {
@@ -106,6 +102,10 @@ const logIntoInstagramManually = async ({
     afterNavigateButton,
   } = platformDetails.selectors;
   await page.click(afterNavigateButton);
+
+  if (!platformDetails.username || !platformDetails.password) {
+    throw new Error("Username or password not set");
+  }
 
   //fill in the username and password
   await page.fill(usernameSelector, platformDetails.username);
