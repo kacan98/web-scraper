@@ -21,11 +21,13 @@ export const scrapeJobsLinkedin = async (
     location,
     searchId,
     shouldLogin = false,
+    postsMaxAgeSeconds
   }: {
     jobDescription: string;
     location: string;
     searchId: number;
     shouldLogin?: boolean;
+      postsMaxAgeSeconds?: number;
   }
 ) => {
   page.setDefaultTimeout(ONE_HOUR);
@@ -42,7 +44,7 @@ export const scrapeJobsLinkedin = async (
 
   await page.goto(`https://www.linkedin.com/jobs/search/`);
 
-  await search(page, jobDescription, location, 'week');
+  await search(page, jobDescription, location, postsMaxAgeSeconds);
 
   await page.waitForTimeout(3000);
 
@@ -255,7 +257,7 @@ async function search(
   page: Page,
   _jobDescription: string,
   _location: string,
-  postsMaxAge?: keyof typeof postAgeMap
+  postsMaxAgeSeconds: number = postAgeMap['week']
 ) {
   const elements = await tryToFindElementsFromSelectors(
     page,
@@ -290,14 +292,14 @@ async function search(
   });
 
 
-  if (postsMaxAge) {
+  if (postsMaxAgeSeconds) {
     try {
       const maxAgeTimeout = 30000;
       const defaultMaxAgeOptions = { timeout: maxAgeTimeout };
 
       // Build the query parameters directly
       // Note: using 'f_TPR=r604800' for an example of "Past week" filtering 
-      const newUrl = `${page.url()}&f_TPR=r${postAgeMap[postsMaxAge]}`;
+      const newUrl = `${page.url()}&f_TPR=r${postsMaxAgeSeconds}`;
       await page.goto(newUrl, defaultMaxAgeOptions);
     } catch (error) {
       console.error('something went wrong with selecting the max age', error)

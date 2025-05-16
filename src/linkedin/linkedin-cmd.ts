@@ -1,10 +1,10 @@
+import { getElapsedTime } from "cmd";
+import { DEV_MODE } from "envVars";
 import inquirer from "inquirer";
 import { analyzeLinkedInJobs } from "src/ai/ai-cmd";
-import { askGemini } from "src/ai/gemini";
 import { scrapeLinkedinJobs } from "src/linkedin/linkedin-scraping-cmd";
 import yargs from "yargs/yargs";
 import { findMatchingJobsForKarel } from "./jobs/findMatchingJobs";
-import { getElapsedTime } from "cmd";
 import { findRatedJobsForKarel } from "./jobs/findRatedJobs";
 
 
@@ -55,17 +55,18 @@ export const linkedinMenu = async () => {
             } catch (error) {
                 console.error('Error scraping LinkedIn jobs:', error);
             }
-            
+
             console.log('Trying to analyze jobs...');
             //I know the default is true, I just wanna make sure that it's extra much true here :D
             await analyzeLinkedInJobs(true);
-            await findMatchingJobsForKarel();
+            DEV_MODE && await findMatchingJobsForKarel();
 
             console.log(`Scraping completed in ${getElapsedTime(timeStarted)}`);
             break;
         case LinkedinOptions.AI:
             await analyzeLinkedInJobs();
-            await findMatchingJobsForKarel();
+            DEV_MODE && await findMatchingJobsForKarel();
+
             break;
         case LinkedinOptions.FIND_MATCHING_JOBS:
             await findMatchingJobsForKarel();

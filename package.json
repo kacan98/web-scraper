@@ -7,7 +7,8 @@
     "faster-less-safe-start": "tsx cmd.ts",
     "help": "npm run faster-less-safe-start -- --help",
     "docker-up": "docker-compose up -d",
-    "update-db-with-drizzle-schema": "npx drizzle-kit push --config ./drizzle.config.ts"
+    "update-db-with-drizzle-schema": "npx drizzle-kit push --config ./drizzle.config.ts",
+    "scrape-jobs": "npm run start -- --p LinkedIn --a Scrape_jobs --l Copenhagen --s TypeScript --m 86400"
   },
   "keywords": [],
   "author": "",

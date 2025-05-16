@@ -37,10 +37,16 @@ export const scrapeLinkedinJobs = async () => {
       alias: "l",
       describe: "Location to search for",
       type: "string",
+    })
+    .option("maxAge", {
+      alias: "m",
+      describe: "Max age of the job postings in seconds",
+      type: "number",
     }).argv;
 
-  let searchTermsUnparsed = argv.searchTerm;
+  let searchTermsUnparsed = argv.searchTerms;
   let location = argv.location;
+  const maxAge = argv.maxAge;
 
   if (!searchTermsUnparsed) {
     const response = await inquirer.prompt([
@@ -93,6 +99,7 @@ export const scrapeLinkedinJobs = async () => {
       location,
       searchId,
       shouldLogin: true,
+      postsMaxAgeSeconds: maxAge,
     });
   }
 

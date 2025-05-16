@@ -39,7 +39,7 @@ const mainMenu = async () => {
 
   const argv = await yargs(process.argv.slice(2))
     .scriptName("Krels scraper/LinkedIn jobs thing")
-    .alias("p", "action")
+    .alias("p", "platform")
     .describe("p", "Which platform do you want to use?")
     .choices("p", [
       MainMenuActions.INSTAGRAM,
