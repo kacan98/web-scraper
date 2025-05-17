@@ -1,10 +1,12 @@
+import dotenv from "dotenv";
+import { DEV_MODE } from "envVars";
 import fs from "fs";
+import inquirer from "inquirer";
+import { ScrapingSource } from "model";
 import path, { dirname } from "path";
 import { BrowserContext, chromium, Cookie, Page } from "playwright";
+import { findFunctioningSelector } from "src/searchForElements";
 import { fileURLToPath } from "url";
-import dotenv from "dotenv";
-import { ScrapingSource } from "model";
-import { DEV_MODE } from "envVars";
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -115,6 +117,32 @@ const logIntoInstagramManually = async ({
 
   await page.click('button[type="submit"]');
 
+  //ask for input by inquirer and then press them as keys
+  const { securityCode } = await inquirer.prompt({
+    type: "input",
+    name: "securityCode",
+    message: "Enter the security code sent to your email:",
+  });
+
+  if (securityCode) {
+    //type the security code
+    const res = await findFunctioningSelector(
+      page,
+      [
+        'input[name="pin"]',
+        '#input__email_verification_pin',
+        'input[aria-label="Verification code"]',
+        'input[placeholder="Enter code"]'
+      ]
+    )
+
+    if (!res) {
+      throw new Error("No security code input found");
+    }
+
+    await page.fill(res, securityCode);
+  }
+  
   //wait for nav to appear
   await page.waitForSelector(afterLoginConfirm);
 
