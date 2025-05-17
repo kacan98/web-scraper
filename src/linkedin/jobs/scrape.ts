@@ -13,6 +13,7 @@ import { markJobAsInSearch, saveLinkedinJobInDb } from "./jobs.db";
 import { sleepApprox } from "src/utils";
 
 const ONE_HOUR = 60 * 60 * 1000;
+const THREE_MINUTES = 3 * 60 * 1000;
 
 export const scrapeJobsLinkedin = async (
   page: Page,
@@ -31,7 +32,7 @@ export const scrapeJobsLinkedin = async (
   }
 ) => {
   log('Starting scraping jobs on LinkedIn');
-  page.setDefaultTimeout(ONE_HOUR);
+  page.setDefaultTimeout(THREE_MINUTES);
   if (shouldLogin) {
     await login({ page, platform: ScrapingSource.LinkedIn });
   } else {
