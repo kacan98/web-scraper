@@ -60,6 +60,10 @@ export const getCookies = async ({
     cookies = JSON.parse(fs.readFileSync(cookiesPath, "utf8"));
   }
 
+  if (!cookies && !DEV_MODE) {
+    throw new Error("No cookies found!");
+  }
+
   if (!cookies || cookies.length < 4) {
     const browser = await chromium.launch({ headless: !DEV_MODE });
     const context = await browser.newContext();

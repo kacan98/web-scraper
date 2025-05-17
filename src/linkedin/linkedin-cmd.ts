@@ -71,6 +71,7 @@ export const linkedinMenu = async () => {
         case LinkedinOptions.FIND_MATCHING_JOBS:
             await findMatchingJobsForKarel();
             break;
+
         case LinkedinOptions.RATE_JOBS:
             await findRatedJobsForKarel();
             break;

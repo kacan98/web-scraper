@@ -30,6 +30,7 @@ export const scrapeJobsLinkedin = async (
       postsMaxAgeSeconds?: number;
   }
 ) => {
+  log('Starting scraping jobs on LinkedIn');
   page.setDefaultTimeout(ONE_HOUR);
   if (shouldLogin) {
     await login({ page, platform: ScrapingSource.LinkedIn });
@@ -42,14 +43,13 @@ export const scrapeJobsLinkedin = async (
     }
   }
 
+  log("Login successful");
+
   await page.goto(`https://www.linkedin.com/jobs/search/`);
 
   await search(page, jobDescription, location, postsMaxAgeSeconds);
 
   await page.waitForTimeout(3000);
-
-  // Check if the selectors are still valid
-  //testLinkedinJobSelectors(page);
 
   let jobCardsSelector = await findFunctioningSelector(
     page,
