@@ -31,9 +31,9 @@ export const scrapeJobsLinkedin = async (
       postsMaxAgeSeconds?: number;
   }
 ) => {
-  log('Starting scraping jobs on LinkedIn');
   page.setDefaultTimeout(THREE_MINUTES);
   if (shouldLogin) {
+    log('Trying to log in');
     await login({ page, platform: ScrapingSource.LinkedIn });
   } else {
     //dismiss prompt to log in

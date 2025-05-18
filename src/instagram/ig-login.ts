@@ -6,6 +6,7 @@ import { ScrapingSource } from "model";
 import path, { dirname } from "path";
 import { BrowserContext, chromium, Cookie, Page } from "playwright";
 import { findFunctioningSelector } from "src/searchForElements";
+import { log } from "src/utils";
 import { fileURLToPath } from "url";
 dotenv.config();
 
@@ -70,6 +71,7 @@ export const getCookies = async ({
   );
 
   if (fs.existsSync(cookiesPath)) {
+    console.log("Cookies file found, loading cookies...");
     cookies = JSON.parse(fs.readFileSync(cookiesPath, "utf8"));
   }
 
@@ -102,13 +104,15 @@ const logIntoInstagramManually = async ({
   context: BrowserContext;
   platform: ScrapingSource;
 }): Promise<Cookie[]> => {
+  console.log("Trying to log in manually...");
   const platformDetails = platformSpecifics[platform];
   //set longer timeout
   page.setDefaultTimeout(1000 * 60 * 5);
 
-  await page.goto(platformDetails.loginUrl);
-
-  console.log("Trying to log in manually...");
+  log(`Navigating to ${platformDetails.loginUrl}`);
+  await page.goto(platformDetails.loginUrl, {
+    timeout: 10 * 1000,
+  });
 
   const {
     username: usernameSelector,
@@ -118,7 +122,7 @@ const logIntoInstagramManually = async ({
   } = platformDetails.selectors;
   if (afterNavigateButton) {
     await page.click(afterNavigateButton, {
-      timeout: 20
+      timeout: 20 * 1000,
     });
   }
 
@@ -126,10 +130,12 @@ const logIntoInstagramManually = async ({
     throw new Error("Username or password not set");
   }
 
+  log('Filling in username and password');
   //fill in the username and password
   await page.fill(usernameSelector, platformDetails.username);
   await page.fill(passwordSelector, platformDetails.password);
 
+  log('Clicking login button');
   await page.click('button[type="submit"]');
 
   //ask for input by inquirer and then press them as keys
