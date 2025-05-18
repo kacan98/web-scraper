@@ -12,4 +12,4 @@ RUN npm install
 COPY . .
 
 # Command to run the cron job
-CMD ["npm", "run", "scrape-jobs-remote"]
+CMD ["npx", "playwright", "install", "chromium", "--with-deps"]

@@ -8,7 +8,17 @@ workers:
     dockerfile_path: Dockerfile
     instance_count: 1
     instance_size_slug: apps-s-1vcpu-0.5gb
-    source_dir: /
+jobs:
+  - name: init-cookies
+    github:
+      branch: main
+      deploy_on_push: false
+      repo: kacan98/web-scraper
+    dockerfile_path: Dockerfile
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    run_command: npm run scrape-jobs-remote
+    kind: PRE_DEPLOY
 alerts:
   - rule: DEPLOYMENT_FAILED
   - rule: DOMAIN_FAILED
