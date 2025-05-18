@@ -18,7 +18,20 @@ const IG_PASSWORD = process.env.IG_PASSWORD;
 const LINKEDIN_LOGIN = process.env.LINKEDIN_LOGIN;
 const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD;
 
-const platformSpecifics = {
+const platformSpecifics: {
+  [key in ScrapingSource]: {
+    pathToCookies: string;
+    loginUrl: string;
+    selectors: {
+      username: string;
+      password: string;
+      afterLoginConfirm: string;
+      afterNavigateButton?: string;
+    };
+    username?: string;
+    password?: string;
+  };
+} = {
   [ScrapingSource.Instagram]: {
     pathToCookies: "../../instagram-cookies.json",
     loginUrl: "https://www.instagram.com",
@@ -33,10 +46,8 @@ const platformSpecifics = {
   },
   [ScrapingSource.LinkedIn]: {
     pathToCookies: "../../linkedin-cookies.json",
-    loginUrl: "https://www.linkedin.com",
+    loginUrl: "https://www.linkedin.com/login",
     selectors: {
-      afterNavigateButton:
-        "a[data-tracking-control-name='guest_homepage-basic_nav-header-signin']",
       username: 'input[id="username"]',
       password: 'input[id="password"]',
       afterLoginConfirm: 'strong:has-text("Start a post")',
@@ -105,7 +116,11 @@ const logIntoInstagramManually = async ({
     afterLoginConfirm,
     afterNavigateButton,
   } = platformDetails.selectors;
-  await page.click(afterNavigateButton);
+  if (afterNavigateButton) {
+    await page.click(afterNavigateButton, {
+      timeout: 20
+    });
+  }
 
   if (!platformDetails.username || !platformDetails.password) {
     throw new Error("Username or password not set");
@@ -142,7 +157,7 @@ const logIntoInstagramManually = async ({
 
     await page.fill(res, securityCode);
   }
-  
+
   //wait for nav to appear
   await page.waitForSelector(afterLoginConfirm);
 
