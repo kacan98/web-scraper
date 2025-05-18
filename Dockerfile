@@ -10,5 +10,3 @@ RUN npm install
 
 # Copy the rest of the application
 COPY . .
-
-RUN npx playwright install chromium --with-deps
