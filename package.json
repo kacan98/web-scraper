@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "npm run docker-up && tsx index.ts",
-    "start-no-docker": "tsx index.ts",
+    "start-with-local-db": "npm run docker-up && tsx index.ts",
+    "start": "tsx index.ts",
     "help": "npm run faster-less-safe-start -- --help",
     "docker-up": "docker-compose up -d",
     "update-db-with-drizzle-schema": "npx drizzle-kit push --config ./drizzle.config.ts",
-    "scrape-jobs-remote": "npx playwright install chromium && tsx index.ts --p LinkedIn --a Scrape_jobs --l Copenhagen --s TypeScript --m 86400"
+    "scrape-jobs-remote": "npx playwright install && tsx index.ts --p LinkedIn --a Scrape_jobs --l Copenhagen --s TypeScript --m 86400",
+    "scrape-jobs-remotely": "npm run scrape-jobs-remote",
+    "run-with-docker": "docker run --env-file .env -it --rm kcancara/web-scraper"
   },
   "keywords": [],
   "author": "",

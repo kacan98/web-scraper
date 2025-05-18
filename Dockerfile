@@ -11,5 +11,4 @@ RUN npm install
 # Copy the rest of the application
 COPY . .
 
-# Command to run the cron job
-CMD ["npx", "playwright", "install", "chromium", "--with-deps"]
+RUN npx playwright install chromium --with-deps
