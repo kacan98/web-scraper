@@ -162,6 +162,10 @@ const logIntoInstagramManually = async ({
     }
 
     await page.fill(res, securityCode);
+    //log the whole html structure of the page
+    console.log(await page.content());
+    
+    await page.click('button[type="submit"]');
   }
 
   //wait for nav to appear
