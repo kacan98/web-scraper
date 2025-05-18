@@ -1,0 +1,14 @@
+name: linkedin-scraper
+workers:
+  - name: scraper-worker
+    github:
+      branch: main
+      deploy_on_push: true
+      repo: kacan98/web-scraper
+    dockerfile_path: Dockerfile
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    source_dir: /
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED
