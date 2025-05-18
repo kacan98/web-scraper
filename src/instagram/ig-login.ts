@@ -147,6 +147,7 @@ const logInManually = async ({
 
   if (securityCode) {
     //type the security code
+    console.log("trying to find selector for security code input");
     const res = await findFunctioningSelector(
       page,
       [
@@ -162,6 +163,7 @@ const logInManually = async ({
     }
 
     try {
+      console.log("Filling in security code");
       await page.fill(res, securityCode, {
         timeout: 10 * 1000,
       });

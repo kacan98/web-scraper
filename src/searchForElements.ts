@@ -82,8 +82,6 @@ export const findFunctioningSelector = async (
   for (const s of selectors) {
     const element = page.locator(s);
 
-    const nrOfelements = await element.count();
-
     if (await element.first().isVisible()) {
       return s;
     }
