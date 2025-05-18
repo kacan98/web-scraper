@@ -81,7 +81,7 @@ export const getCookies = async ({
     const context = await browser.newContext();
     const page = await context.newPage();
 
-    cookies = await logIntoInstagramManually({ page, context, platform });
+    cookies = await logInManually({ page, context, platform });
 
     fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
     await browser.close();
@@ -95,7 +95,7 @@ export const getCookies = async ({
   return cookies;
 };
 
-const logIntoInstagramManually = async ({
+const logInManually = async ({
   page,
   context,
   platform,
@@ -161,10 +161,19 @@ const logIntoInstagramManually = async ({
       throw new Error("No security code input found");
     }
 
-    await page.fill(res, securityCode);
-    //log the whole html structure of the page
-    console.log(await page.content());
-    
+    try {
+      await page.fill(res, securityCode, {
+        timeout: 10 * 1000,
+      });
+    } catch (e) {
+      console.log("Error filling in security code, trying another selector");
+      //log the whole html structure of the page
+      console.log(await page.content());
+      page.getByPlaceholder('Enter code').fill(securityCode, {
+        timeout: 10 * 1000,
+      });
+    }
+
     await page.click('button[type="submit"]');
   }
 
