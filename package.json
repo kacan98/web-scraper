@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "npm run docker-up && tsx cmd.ts",
-    "start-no-docker": "tsx cmd.ts",
+    "start": "npm run docker-up && tsx index.ts",
+    "start-no-docker": "tsx index.ts",
     "help": "npm run faster-less-safe-start -- --help",
     "docker-up": "docker-compose up -d",
     "update-db-with-drizzle-schema": "npx drizzle-kit push --config ./drizzle.config.ts",
-    "scrape-jobs-remote": "npx playwright install chromium && tsx cmd.ts --p LinkedIn --a Scrape_jobs --l Copenhagen --s TypeScript --m 86400"
+    "scrape-jobs-remote": "npx playwright install chromium && tsx index.ts --p LinkedIn --a Scrape_jobs --l Copenhagen --s TypeScript --m 86400"
   },
   "keywords": [],
   "author": "",
@@ -25,7 +25,9 @@
     "mongodb": "^6.8.0",
     "mongoose": "^8.5.4",
     "pg": "^8.13.1",
-    "playwright": "^1.46.1",
+    "playwright": "^1.52.0",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "yargs": "^17.7.2",
     "zod": "^3.24.2"
   },

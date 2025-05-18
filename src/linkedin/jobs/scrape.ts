@@ -1,4 +1,4 @@
-import { Page } from "@playwright/test";
+import { Page } from "playwright-core";
 import { log } from "console";
 import { LinkedinJobPostTable } from "db/schema/linkedin/linkedin-schema";
 import { ScrapingSource } from "model";
@@ -43,6 +43,17 @@ export const scrapeJobsLinkedin = async (
       await dismissButton.click();
     }
   }
+
+  // check if we are logged in by searching for "Sign in" or "Continue with Google"
+  const signInButton = await page.$(
+    "button[aria-label='Sign in'] , button[aria-label='Continue with Google']"
+  );
+
+  if (signInButton) {
+    log("Not logged in. Please log in to LinkedIn.");
+    return;
+  }
+
 
   log("Login successful");
 

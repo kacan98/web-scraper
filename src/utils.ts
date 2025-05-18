@@ -1,5 +1,12 @@
 import { DEV_MODE } from "envVars";
-import { chromium, Page } from "playwright";
+import { processStarted } from "index";
+import { Page } from "playwright";
+import { chromium } from "playwright-extra";
+import extraPluginStealth from "puppeteer-extra-plugin-stealth";
+
+const stealth = extraPluginStealth()
+
+chromium.use(stealth);
 
 export const tabToNextElement = async (
   page: Page
@@ -95,4 +102,22 @@ export function logProgress(
       )}% (${current}/${total} ${itemTypeLabel})`
     );
   }
+}
+
+export const getElapsedTime = (since: Date = processStarted) => {
+  const now = new Date(since);
+
+  const elapsedTime = now.getTime() - processStarted.getTime();
+  const seconds = Math.floor((elapsedTime / 1000) % 60);
+  const minutes = Math.floor((elapsedTime / (1000 * 60)) % 60);
+  const hours = Math.floor((elapsedTime / (1000 * 60 * 60)) % 24);
+  const days = Math.floor(elapsedTime / (1000 * 60 * 60 * 24));
+
+  let result = `Elapsed time: `;
+  if (days > 0) result += `${days} days, `;
+  if (hours > 0) result += `${hours} hours, `;
+  if (minutes > 0) result += `${minutes} minutes, `;
+  if (seconds > 0) result += `${seconds} seconds`;
+
+  return result;
 }

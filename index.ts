@@ -1,27 +1,62 @@
-import { DEV_MODE } from "envVars";
-import { chromium } from "playwright";
+import { dbAvailable } from "db";
+import inquirer from "inquirer";
+import { ScrapingSource } from "model";
+import { openInstagramCmdMenu } from "src/instagram/instagram-cmd";
+import { linkedinMenu } from "src/linkedin/linkedin-cmd";
+import yargs from "yargs/yargs";
 
-async function main() {
-  // Launch a new instance of a Chromium browser with headless mode
-  // disabled for visibility
-  const browser = await chromium.launch({
-    headless: !DEV_MODE,
-  });
+export const processStarted = new Date();
 
-  // Create a new Playwright context to isolate browsing session
-  const context = await browser.newContext();
-  // Open a new page/tab within the context
-  const page = await context.newPage();
-
-  // Navigate to the GitHub topics homepage
-  await page.goto("https://www.instagram.com/");
-
-  // Wait for 1 second to ensure page content loads properly
-  await page.waitForTimeout(1000);
-
-  // Close the browser instance after task completion
-  await browser.close();
+enum MainMenuActions {
+  INSTAGRAM = ScrapingSource.Instagram,
+  LINKEDIN = ScrapingSource.LinkedIn,
+  EXIT = "Exit",
 }
 
-// Execute the main function
-main();
+const mainMenu = async () => {
+  const dbIsAvailable = await dbAvailable();
+  if (!dbIsAvailable) {
+    throw new Error(`Database is not available.`);
+    return;
+  }
+
+  const argv = await yargs(process.argv.slice(2))
+    .scriptName("Krels scraper/LinkedIn jobs thing")
+    .alias("p", "platform")
+    .describe("p", "Which platform do you want to use?")
+    .choices("p", [
+      MainMenuActions.INSTAGRAM,
+      MainMenuActions.LINKEDIN,
+    ]).argv;
+
+  let action = argv.p;
+
+  if (!action) {
+    const result = await inquirer.prompt({
+      type: "select",
+      name: "action",
+      message: "What would you like to do?",
+      choices: [
+        { name: MainMenuActions.LINKEDIN, value: MainMenuActions.LINKEDIN },
+        { name: MainMenuActions.INSTAGRAM, value: MainMenuActions.INSTAGRAM },
+        { name: "Exit", value: MainMenuActions.EXIT },
+      ],
+    });
+
+    action = result.action;
+  }
+
+  switch (action) {
+    case MainMenuActions.INSTAGRAM:
+      await openInstagramCmdMenu();
+      break;
+    case MainMenuActions.LINKEDIN:
+      await linkedinMenu();
+      break;
+    case MainMenuActions.EXIT:
+      console.log("Exiting...");
+      break;
+  }
+};
+
+mainMenu();

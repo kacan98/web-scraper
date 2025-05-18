@@ -1,10 +1,9 @@
 import inquirer from "inquirer";
 import { Page } from "playwright";
-import { log, openPage } from "src/utils";
+import { getElapsedTime, log, openPage } from "src/utils";
 import yargs from "yargs";
 import { scrapeJobsLinkedin } from "./jobs/scrape";
 import { createNewJobSearch } from "./jobs/jobs.db";
-import { getElapsedTime } from "cmd";
 
 export const karelSearchWords = [
   'Angular',

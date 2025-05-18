@@ -1,4 +1,3 @@
-import { getElapsedTime } from "cmd";
 import { DEV_MODE } from "envVars";
 import inquirer from "inquirer";
 import { analyzeLinkedInJobs } from "src/ai/ai-cmd";
@@ -6,6 +5,7 @@ import { scrapeLinkedinJobs } from "src/linkedin/linkedin-scraping-cmd";
 import yargs from "yargs/yargs";
 import { findMatchingJobsForKarel } from "./jobs/findMatchingJobs";
 import { findRatedJobsForKarel } from "./jobs/findRatedJobs";
+import { getElapsedTime } from "src/utils";
 
 
 enum LinkedinOptions {
