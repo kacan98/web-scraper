@@ -1,0 +1,18 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run npm dev on start",
+      "type": "shell",
+      "command": "npm run scrape-jobs-remote",
+      "windows": {
+        "command": "npm run scrape-jobs-remote"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "runOptions": { "runOn": "folderOpen" }
+    }
+  ]
+}

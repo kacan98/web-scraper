@@ -9,7 +9,6 @@ node_modules/
 
 # Ignore the postgres data directory in the root - that's the volume we're mounting
 /pgdata/
-/.*/
 /errors/
 /captured_responses/
 /db/schema/test/
