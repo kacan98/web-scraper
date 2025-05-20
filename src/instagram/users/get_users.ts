@@ -1,4 +1,3 @@
-import { Page } from "@playwright/test";
 import {
   areWeOnDoesntExistPage,
   login,
@@ -16,6 +15,7 @@ import {
 } from "./get_users.model";
 import { saveInFile } from "src/local-file-saving";
 import { ScrapingSource } from "model";
+import { Page } from "playwright";
 
 dotenv.config();
 

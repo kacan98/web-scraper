@@ -7,7 +7,7 @@ import { openPage } from "src/utils";
 
 enum InstagramMainMenuActions {
   SCRAPE_USERS = "Scrape users from account",
-  UPDATE_INFORMATION_ABOUT_USERS_FOLLOWING 
+  UPDATE_INFORMATION_ABOUT_USERS_FOLLOWING
   = `Update info about users following the current user 
   - run this before unfollowing to avoid unfollowing users who follow back`,
   FOLLOW_USERS = "Follow users",
@@ -22,15 +22,8 @@ const askWhichAccountToScrape = async (): Promise<string> => {
         name: "accountToScrape",
         message: "Which account do you want to scrape?",
         choices: [
-          "swedishpysel",
-          "lenalinderholm",
-          "ateljeristanmariab",
-          "kreativakarin",
-          "fixasjalv",
-          "pysselbolaget",
-          "sabinebrandt_studio",
-          "pysselbyran",
-          "pysseldoktorn",
+          "emmabjorndahl",
+          "hildanilssson"
         ],
         type: "list",
       },

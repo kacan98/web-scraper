@@ -1,11 +1,11 @@
+import Bottleneck from "bottleneck";
+import { insertAIAnalysis } from "src/linkedin/jobs/ai-job-analysis.db";
 import { getJobById, getJobIds } from "src/linkedin/jobs/jobs.db";
-import { logProgress } from "src/utils";
+import { logProgress, removeNewLinesAndDoubleSpaces } from "src/utils";
 import {
   extractJobInfoWithGemini
 } from "./gemini";
 import { geminiModels } from "./gemini.model";
-import { insertAIAnalysis } from "src/linkedin/jobs/ai-job-analysis.db";
-import Bottleneck from "bottleneck";
 
 export enum AISource {
   Gemini = 'gemini',
@@ -25,7 +25,7 @@ export const analyzeLinkedInJobs = async (onlyJobsWithoutAnalysis = true) => {
 
   console.log('Total jobs to process:', jobsToAnalyze);
 
-  const model: keyof typeof geminiModels = "Gemini 2.0 Flash-Lite";
+  const model: keyof typeof geminiModels = "Gemini 2.0 Flash-Lite"
   const modelProperties = geminiModels[model];
   const limitPerMinute = modelProperties.requestsPerMinute;
 
@@ -45,18 +45,36 @@ export const analyzeLinkedInJobs = async (onlyJobsWithoutAnalysis = true) => {
   const processJob = async (jobId: number) => {
     try {
       const job = await getJobById(jobId);
+      removeNewLinesAndDoubleSpaces(job);
+
       const jobInfo = await limiter.schedule(() => extractJobInfoWithGemini(job, modelProperties.apiName));
 
       // Validate mandatory fields
       if (
-        !jobInfo.postLanguage ||
-        !jobInfo.jobSummary ||
-        !jobInfo.skillsRequired ||
-        !jobInfo.skillsOptional ||
         jobInfo.isInternship === undefined
       ) {
-        throw new Error('Something is wrong with the data returned from the AI');
+        jobInfo.isInternship = false;
       }
+
+      if (!jobInfo.jobSummary) {
+        console.log(jobInfo);
+        throw new Error('Job summary is empty');
+      }
+
+      if (!jobInfo.skillsRequired) {
+        console.log(jobInfo);
+        throw new Error('No required skills found');
+      }
+
+      if (!jobInfo.skillsOptional) {
+        jobInfo.skillsOptional = [];
+      }
+
+      if (!jobInfo.postLanguage) {
+        jobInfo.postLanguage = 'English';
+      }
+
+      const daysSinceScraped = Math.floor((Date.now() - job.dateScraped.getTime()) / (1000 * 60 * 60 * 24));
 
       await insertAIAnalysis(job.id, {
         // Required fields
@@ -73,7 +91,7 @@ export const analyzeLinkedInJobs = async (onlyJobsWithoutAnalysis = true) => {
         companyIndustry: jobInfo.companyIndustry ?? undefined,
         workModel: jobInfo.workModel ?? undefined,
         salary: jobInfo.salary ?? undefined,
-        postedDaysAgo: jobInfo.postedDaysAgo ?? undefined,
+        postedDaysAgo: jobInfo.postedDaysAgo ?? daysSinceScraped,
         city: jobInfo.city ?? undefined
       });
     } catch (error) {

@@ -121,3 +121,23 @@ export const getElapsedTime = (since: Date = processStarted) => {
 
   return result;
 }
+
+export const removeNewLinesAndDoubleSpaces = (obj: { [key: string]: any }): void => {
+  if (Array.isArray(obj)) {
+    obj.forEach((element, index) => {
+      if (typeof element === 'string') {
+        obj[index] = element.replace(/\r?\n/g, '').replace(/\s{2,}/g, ' ');
+      } else if (typeof element === 'object' && element !== null) {
+        removeNewLinesAndDoubleSpaces(element);
+      }
+    });
+  } else {
+    Object.keys(obj).forEach(key => {
+      if (typeof obj[key] === 'string') {
+        obj[key] = obj[key].replace(/\r?\n/g, '').replace(/\s{2,}/g, ' ');
+      } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+        removeNewLinesAndDoubleSpaces(obj[key]);
+      }
+    });
+  }
+}

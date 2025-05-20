@@ -60,8 +60,9 @@ export const scrapeJobsLinkedin = async (
   await page.goto(`https://www.linkedin.com/jobs/search/`);
 
   await search(page, jobDescription, location, postsMaxAgeSeconds);
+  log("Search done");
 
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(5000); // wait for the page to load
 
   let jobCardsSelector = await findFunctioningSelector(
     page,
@@ -287,12 +288,16 @@ async function search(
 
   const { searchInput, searchButton, locationInput } = elements;
 
-  await searchInput.fill(_jobDescription);
+  console.log('')
+  await searchInput.fill(_jobDescription, {
+    timeout: 10000,
+  });
+  console.log('Job description filled in');
   //fill in location a character at a time
-  for (let i = 0; i < _location.length; i++) {
-    await locationInput.fill(_location.slice(0, i + 1));
-    await sleepApprox(page, 50);
-  }
+  await locationInput.fill(_location, {
+    timeout: 10000,
+  });
+  console.log('Location filled in');
   //make sure that the location is found by linkedin
   await searchButton.click();
 
@@ -302,7 +307,6 @@ async function search(
   await page.waitForURL(urlRegex, {
     timeout: 10000
   });
-
 
   if (postsMaxAgeSeconds) {
     try {

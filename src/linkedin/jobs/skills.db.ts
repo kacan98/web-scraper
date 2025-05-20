@@ -24,7 +24,7 @@ export const findOrInsertSkillsForJob = async (skills: string[], tx: Transaction
     if (newSkillNames.length > 0) {
         newSkills = await tx
             .insert(skillTable)
-            .values(newSkillNames.map(name => ({ name })))
+            .values(newSkillNames.map(name => ({ name: name.slice(0, 255) })))
             .returning({
                 id: skillTable.id,
                 name: skillTable.name,

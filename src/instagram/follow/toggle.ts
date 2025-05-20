@@ -1,4 +1,3 @@
-import { Page, test } from "@playwright/test";
 import {
   areWeOnDoesntExistPage,
   login,
@@ -20,6 +19,7 @@ import dotenv from "dotenv";
 import { flipACoin, log, randomInt, sleepApprox } from "src/utils";
 import { errorLog } from "src/local-file-saving";
 import { ScrapingSource } from "model";
+import { Page } from "playwright";
 
 dotenv.config();
 
@@ -47,7 +47,6 @@ export const followInstagramUsers = async ({ page }: { page: Page }) => {
     " more users today"
   );
 
-  // errorLog(new Error("This is a test"));
   page.setDefaultTimeout(0);
 
   log("Getting users to follow...");

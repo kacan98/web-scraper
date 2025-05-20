@@ -1,6 +1,6 @@
 import { ScrapingSource } from "model";
 import { Page } from "playwright";
-import { getCookies } from "src/instagram/ig-login";
+import { getCookies } from "src/login";
 
 export const login = async ({
   page,

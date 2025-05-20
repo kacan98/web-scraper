@@ -66,16 +66,16 @@ export const GeminiJobExtractionSchema = {
                 description: "The skills or technology stack that is optional/nice to have for the job",
                 type: SchemaType.STRING
             },
-            nullable: false
+            nullable: true
         },
         postedDaysAgo: {
             type: SchemaType.NUMBER,
             description: "The number of days ago the job was posted",
-            nullable: true
+            nullable: false
         },
         isInternship: {
             type: SchemaType.BOOLEAN,
-            description: "Whether the job is an internship or not",
+            description: "Whether the job is an internship or not. False if there is no mention of an internship.",
             nullable: false
         },
         city: {
@@ -89,52 +89,70 @@ export const GeminiJobExtractionSchema = {
 export type GeminiExtractedJob = FromSchema<typeof GeminiJobExtractionSchema>;
 
 export const geminiModels = {
+    "Gemini 2.5 Flash Preview 05-20": {
+        apiName: "gemini-2.5-flash-preview-05-20",
+        requestsPerMinute: 10,
+        tokensPerMinute: 250000,
+        requestsPerDay: 500,
+    },
+    "Gemini 2.5 Pro Experimental 03-25": {
+        apiName: "gemini-2.5-pro-experimental-03-25",
+        requestsPerMinute: 5,
+        tokensPerMinute: 250000,
+        requestsPerDay: 25,
+    },
     "Gemini 2.0 Flash": {
         apiName: "gemini-2.0-flash",
         requestsPerMinute: 15,
         tokensPerMinute: 1000000,
         requestsPerDay: 1500,
     },
+    "Gemini 2.0 Flash Preview Image Generation": {
+        apiName: "gemini-2.0-flash-preview-image-generation",
+        requestsPerMinute: 10,
+        tokensPerMinute: 200000,
+        requestsPerDay: 100,
+    },
     "Gemini 2.0 Flash Experimental": {
-        apiName: "gemini-2.0-flash",
+        apiName: "gemini-2.0-flash-experimental",
         requestsPerMinute: 10,
         tokensPerMinute: 1000000,
-        requestsPerDay: 1500,
+        requestsPerDay: 1000,
     },
     "Gemini 2.0 Flash-Lite": {
-        apiName: "gemini-2.0-flash",
+        apiName: "gemini-2.0-flash-lite",
         requestsPerMinute: 30,
         tokensPerMinute: 1000000,
-        requestsPerDay: 1500,
-    },
-    "Gemini 2.0 Pro Experimental 02-05": {
-        apiName: "gemini-2.0-pro",
-        requestsPerMinute: 2,
-        tokensPerMinute: 1000000,
-        requestsPerDay: 50,
-    },
-    "Gemini 2.0 Flash Thinking Experimental 01-21": {
-        apiName: "gemini-2.0-flash-thinking",
-        requestsPerMinute: 10,
-        tokensPerMinute: 4000000,
         requestsPerDay: 1500,
     },
     "Gemini 1.5 Flash": {
         apiName: "gemini-1.5-flash",
         requestsPerMinute: 15,
-        tokensPerMinute: 1000000,
-        requestsPerDay: 1500,
+        tokensPerMinute: 250000,
+        requestsPerDay: 500,
     },
     "Gemini 1.5 Flash-8B": {
         apiName: "gemini-1.5-flash-8b",
         requestsPerMinute: 15,
-        tokensPerMinute: 1000000,
-        requestsPerDay: 1500,
+        tokensPerMinute: 250000,
+        requestsPerDay: 500,
     },
-    "Gemini 1.5 Pro": {
-        apiName: "gemini-1.5-pro",
-        requestsPerMinute: 2,
-        tokensPerMinute: 32000,
-        requestsPerDay: 50,
-    }
-} as const;
+    "Gemma 3": {
+        apiName: "gemma-3",
+        requestsPerMinute: 30,
+        tokensPerMinute: 15000,
+        requestsPerDay: 14400,
+    },
+    "Gemma 3n": {
+        apiName: "gemma-3n",
+        requestsPerMinute: 30,
+        tokensPerMinute: 15000,
+        requestsPerDay: 14400,
+    },
+    "Gemini Embedding Experimental 03-07": {
+        apiName: "gemini-embedding-experimental-03-07",
+        requestsPerMinute: 5,
+        tokensPerMinute: undefined,
+        requestsPerDay: 100,
+    },
+};
