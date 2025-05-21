@@ -1,14 +1,14 @@
 import { DEV_MODE } from "envVars";
+import { actionPromise } from "index";
 import inquirer from "inquirer";
 import { analyzeLinkedInJobs } from "src/ai/ai-cmd";
 import { scrapeLinkedinJobs } from "src/linkedin/linkedin-scraping-cmd";
-import yargs from "yargs/yargs";
+import { getElapsedTime } from "src/utils";
 import { findMatchingJobsForKarel } from "./jobs/findMatchingJobs";
 import { findRatedJobsForKarel } from "./jobs/findRatedJobs";
-import { getElapsedTime } from "src/utils";
 
 
-enum LinkedinOptions {
+export enum LinkedinOptions {
     SCRAPE = 'Scrape_jobs',
     AI = 'Analyze_scraped_jobs',
     FIND_MATCHING_JOBS = 'Find_jobs_in_db',
@@ -17,17 +17,8 @@ enum LinkedinOptions {
 }
 
 export const linkedinMenu = async () => {
-    const argv = await yargs(process.argv.slice(2))
-        .scriptName("LinkedIn scraper")
-        .alias("a", "action")
-        .describe("a", "What do you want to do?")
-        .choices("a", [
-            LinkedinOptions.SCRAPE,
-            LinkedinOptions.AI,
-            LinkedinOptions.FIND_MATCHING_JOBS,
-        ]).argv;
-
-    let action = argv.a;
+    const actionResult = await actionPromise;
+    let action: LinkedinOptions = actionResult?.action as LinkedinOptions;
 
     if (!action) {
         const result = await inquirer.prompt({
@@ -43,7 +34,7 @@ export const linkedinMenu = async () => {
             ],
         });
 
-        action = result.action;
+        action = result.action.a;
     }
 
     switch (action) {

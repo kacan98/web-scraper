@@ -13,7 +13,7 @@ import {
   IGStatuses,
   IGUser,
 } from "./get_users.model";
-import { saveInFile } from "src/local-file-saving";
+import { errorLog, saveInFile } from "src/local-file-saving";
 import { ScrapingSource } from "model";
 import { Page } from "playwright";
 
@@ -81,40 +81,55 @@ export const scrapeUsersFromAccount = async ({
 
     log(`waiting for ${extractionType} to load`);
     const usersRes = await usersPromise;
-    const statusesRes = await statusesPromise;
+    let statusesRes = await statusesPromise;
 
     log(`${extractionType} loaded`);
     const followers: Followers = await usersRes.json();
     const followingStatuses: IGStatuses = await statusesRes.json();
 
-    users.push(...followers.users);
-    statuses = { ...statuses, ...followingStatuses.friendship_statuses };
+    // users.push(...followers.users);
+    // statuses = { ...statuses, ...followingStatuses.friendship_statuses };
 
     // saveUsersLocally(users);
     // saveStatusesLocally(statuses);
 
-    usersUpdated +=
-      (await saveUsersInDb(followers.users, accountToScrape)) || 0;
-    statusesUpdated +=
-      (await saveStatusesInDb(
-        followingStatuses,
-        accountToScrape,
-        extractionType
-      )) || 0;
-    log(`So far ${usersUpdated} users and ${statusesUpdated} statuses updated`);
+    try {
+      usersUpdated +=
+        (await saveUsersInDb(followers.users, accountToScrape)) || 0;
 
-    //make sure we don't do too many requests too fast
-    log("waiting");
-    await sleepApprox(page, 1500);
+      // Only save statuses for users that exist in followers.users
+      const userIds = new Set(followers.users.map(u => u.pk_id || u.id));
+      const filteredStatuses = {
+        friendship_statuses: Object.fromEntries(
+          Object.entries(followingStatuses.friendship_statuses)
+            .filter(([userId]) => userIds.has(userId))
+        )
+      };
 
-    log('scrolling down to load more "followers"');
-    // try to scroll down to trigger infinite scroll
-    const scrolledSuccessfully = await scrollDown(page);
+      statusesUpdated +=
+        (await saveStatusesInDb(
+          filteredStatuses,
+          accountToScrape,
+          extractionType
+        )) || 0;
+      log(`So far ${usersUpdated} users and ${statusesUpdated} statuses updated`);
 
-    log(`scrolled ${scrolledSuccessfully ? "" : "⚠ UN"}successfully`);
+      //make sure we don't do too many requests too fast
+      log("waiting");
+      await sleepApprox(page, 1500);
 
-    if (!scrolledSuccessfully) {
-      moreToLoad = false;
+      log('scrolling down to load more "followers"');
+      // try to scroll down to trigger infinite scroll
+      const scrolledSuccessfully = await scrollDown(page);
+
+      log(`scrolled ${scrolledSuccessfully ? "" : "⚠ UN"}successfully`);
+
+      if (!scrolledSuccessfully) {
+        moreToLoad = false;
+      }
+
+    } catch (e) {
+      errorLog("Error while saving users or statuses", e);
     }
   }
 

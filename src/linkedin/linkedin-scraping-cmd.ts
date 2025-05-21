@@ -23,25 +23,25 @@ const options = {
   },
 };
 
+const argv = await yargs(process.argv.slice(2))
+  .option("searchTerms", {
+    alias: "s",
+    describe: options.searchTerms.describe,
+    type: "string",
+  })
+  .option("location", {
+    alias: "l",
+    describe: "Location to search for",
+    type: "string",
+  })
+  .option("maxAge", {
+    alias: "m",
+    describe: "Max age of the job postings in seconds",
+    type: "number",
+  }).argv;
+
 export const scrapeLinkedinJobs = async () => {
   const timeStarted = new Date();
-
-  const argv = await yargs(process.argv.slice(2))
-    .option("searchTerms", {
-      alias: "s",
-      describe: options.searchTerms.describe,
-      type: "string",
-    })
-    .option("location", {
-      alias: "l",
-      describe: "Location to search for",
-      type: "string",
-    })
-    .option("maxAge", {
-      alias: "m",
-      describe: "Max age of the job postings in seconds",
-      type: "number",
-    }).argv;
 
   let searchTermsUnparsed = argv.searchTerms;
   let location = argv.location;

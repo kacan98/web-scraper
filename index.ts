@@ -1,11 +1,25 @@
 import { dbAvailable } from "db";
 import inquirer from "inquirer";
 import { ScrapingSource } from "model";
-import { openInstagramCmdMenu } from "src/instagram/instagram-cmd";
-import { linkedinMenu } from "src/linkedin/linkedin-cmd";
+import { InstagramMainMenuActions, openInstagramCmdMenu } from "src/instagram/instagram-cmd";
+import { linkedinMenu, LinkedinOptions } from "src/linkedin/linkedin-cmd";
 import yargs from "yargs/yargs";
 
 export const processStarted = new Date();
+
+export const actionPromise = yargs(process.argv.slice(2))
+  .alias("a", "action")
+  .describe("a", "What do you want to do?")
+  .choices("a", [
+    InstagramMainMenuActions.SCRAPE_USERS,
+    { value: InstagramMainMenuActions.UPDATE_INFORMATION_ABOUT_USERS_FOLLOWING, name: "Update info about users following the current user - run this before unfollowing to avoid unfollowing users who follow back" },
+    InstagramMainMenuActions.FOLLOW_USERS,
+    InstagramMainMenuActions.UNFOLLOW_USERS,
+    LinkedinOptions.SCRAPE,
+    LinkedinOptions.AI,
+    LinkedinOptions.FIND_MATCHING_JOBS,
+
+  ]).argv;
 
 enum MainMenuActions {
   INSTAGRAM = ScrapingSource.Instagram,
