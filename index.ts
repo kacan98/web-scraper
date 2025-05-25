@@ -1,75 +1,97 @@
 import { dbAvailable } from "db";
-import inquirer from "inquirer";
 import { ScrapingSource } from "model";
 import { InstagramMainMenuActions, openInstagramCmdMenu } from "src/instagram/instagram-cmd";
 import { linkedinMenu, LinkedinOptions } from "src/linkedin/linkedin-cmd";
-import yargs from "yargs/yargs";
+import { getCliArgOrPrompt, log } from "src/utils"; // Assuming log is also in utils
+import yargs from 'yargs';
+import { hideBin } from 'yargs/helpers';
 
 export const processStarted = new Date();
 
-export const actionPromise = yargs(process.argv.slice(2))
-  .alias("a", "action")
-  .describe("a", "What do you want to do?")
-  .choices("a", [
-    InstagramMainMenuActions.SCRAPE_USERS,
-    { value: InstagramMainMenuActions.UPDATE_INFORMATION_ABOUT_USERS_FOLLOWING, name: "Update info about users following the current user - run this before unfollowing to avoid unfollowing users who follow back" },
-    InstagramMainMenuActions.FOLLOW_USERS,
-    InstagramMainMenuActions.UNFOLLOW_USERS,
-    LinkedinOptions.SCRAPE,
-    LinkedinOptions.AI,
-    LinkedinOptions.FIND_MATCHING_JOBS,
+// Define available actions by filtering out "BACK" or "EXIT" options
+const validInstagramActions = Object.values(InstagramMainMenuActions).filter(
+  action => action !== InstagramMainMenuActions.BACK
+);
+const validLinkedInOptions = Object.values(LinkedinOptions).filter(
+  option => option !== LinkedinOptions.EXIT // Assuming LinkedinOptions.EXIT exists
+);
 
-  ]).argv;
+const yargsInstance = yargs(hideBin(process.argv))
+  .option('p', {
+    alias: 'platform',
+    describe: 'Platform to use',
+    choices: [ScrapingSource.Instagram, ScrapingSource.LinkedIn, "Exit" as const], // Added "Exit"
+    type: 'string',
+  })
+  .option('a', {
+    alias: 'action',
+    describe: 'Action to perform',
+    choices: [...validInstagramActions, ...validLinkedInOptions],
+    type: 'string',
+  })
+  .option('i', {
+    alias: 'instagramAccount',
+    describe: 'Instagram account to scrape',
+    type: 'string',
+  })
+  .help();
 
+// Export parsed CLI arguments
+export const parsedCliArgs = yargsInstance.argv;
+
+// Enum for main menu choices (already aligns with ScrapingSource and "Exit")
 enum MainMenuActions {
-  INSTAGRAM = ScrapingSource.Instagram,
-  LINKEDIN = ScrapingSource.LinkedIn,
-  EXIT = "Exit",
+  Instagram = ScrapingSource.Instagram,
+  LinkedIn = ScrapingSource.LinkedIn,
+  Exit = "Exit",
 }
 
 const mainMenu = async () => {
-  const dbIsAvailable = await dbAvailable();
-  if (!dbIsAvailable) {
-    throw new Error(`Database is not available.`);
-    return;
+  if (!(await dbAvailable())) {
+    log("DB not available, exiting"); // Using log function
+    process.exit(1); // Exit with an error code
   }
 
-  const argv = await yargs(process.argv.slice(2))
-    .scriptName("Krels scraper/LinkedIn jobs thing")
-    .alias("p", "platform")
-    .describe("p", "Which platform do you want to use?")
-    .choices("p", [
-      MainMenuActions.INSTAGRAM,
-      MainMenuActions.LINKEDIN,
-    ]).argv;
+  const args = await parsedCliArgs; // Await the parsed arguments
 
-  let action = argv.p;
-
-  if (!action) {
-    const result = await inquirer.prompt({
-      type: "select",
-      name: "action",
-      message: "What would you like to do?",
+  const chosenPlatform = await getCliArgOrPrompt<MainMenuActions>(
+    args,
+    'platform', // Corresponds to alias 'p'
+    {
+      type: 'list', // Changed from 'select' to 'list' for inquirer standard
+      name: 'main_platform_choice', // Unique name for this prompt
+      message: 'Which platform do you want to use?',
       choices: [
-        { name: MainMenuActions.LINKEDIN, value: MainMenuActions.LINKEDIN },
-        { name: MainMenuActions.INSTAGRAM, value: MainMenuActions.INSTAGRAM },
-        { name: "Exit", value: MainMenuActions.EXIT },
+        { name: 'Instagram', value: MainMenuActions.Instagram },
+        { name: 'LinkedIn', value: MainMenuActions.LinkedIn },
+        // Assuming LinkedInScraping is not a top-level choice anymore based on previous description
+        // If it is, it should be added here and to MainMenuActions enum
+        { name: 'Exit', value: MainMenuActions.Exit },
       ],
-    });
+    }
+  );
 
-    action = result.action;
-  }
-
-  switch (action) {
-    case MainMenuActions.INSTAGRAM:
-      await openInstagramCmdMenu();
+  switch (chosenPlatform) {
+    case MainMenuActions.Instagram:
+      // Pass the full 'args' object to the platform-specific menu
+      await openInstagramCmdMenu(args);
       break;
-    case MainMenuActions.LINKEDIN:
-      await linkedinMenu();
+    case MainMenuActions.LinkedIn:
+      // Pass the full 'args' object to the platform-specific menu
+      await linkedinMenu(args);
       break;
-    case MainMenuActions.EXIT:
-      console.log("Exiting...");
+    // Case for LinkedInScraping might be needed if it's a separate top-level option
+    // else if (chosenPlatform === MainMenuActions.LinkedInScraping) {
+    //   await linkedinScrapingMenu(args);
+    // }
+    case MainMenuActions.Exit:
+      log("Exiting...");
+      process.exit(0);
       break;
+    default:
+      // Handle any unexpected platform choice
+      log(`Invalid platform choice: ${chosenPlatform}. Exiting.`);
+      process.exit(1);
   }
 };
 

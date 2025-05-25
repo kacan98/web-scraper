@@ -19,11 +19,10 @@
   "description": "",
   "dependencies": {
     "@google/generative-ai": "^0.24.0",
-    "@types/yargs": "^17.0.33",
     "bottleneck": "^2.19.5",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.40.0",
-    "inquirer": "^12.4.3",
+    "inquirer": "^12.6.2",
     "json-schema-to-ts": "^3.1.1",
     "mongodb": "^6.8.0",
     "mongoose": "^8.5.4",
@@ -36,8 +35,10 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.46.1",
+    "@types/inquirer": "^9.0.8",
     "@types/node": "^22.5.0",
     "@types/pg": "^8.11.11",
+    "@types/yargs": "^17.0.33",
     "drizzle-kit": "^0.30.5",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.2",

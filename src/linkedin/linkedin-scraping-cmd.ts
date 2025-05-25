@@ -1,5 +1,5 @@
 import inquirer from "inquirer";
-import { Page } from "playwright";
+import { Browser, Page } from "playwright"; // Added Browser
 import { getElapsedTime, log, openPage } from "src/utils";
 import yargs from "yargs";
 import { scrapeJobsLinkedin } from "./jobs/scrape";
@@ -87,20 +87,29 @@ export const scrapeLinkedinJobs = async () => {
   for (let searchTerm of searchTerms) {
     const searchId = await createNewJobSearch(searchTerm, location);
 
-    let page: Page;
-    page = await openPage();
-    // Don't need this. Never worked. Could be revived one day if I feel like it or need it.
-    // await captureAndSaveResponses(page, ScrapingSource.LinkedIn);
-    // await mockResponses(page, ScrapingSource.LinkedIn);
+    let browser: Browser | undefined;
+    try {
+      const { page, browser: newBrowser } = await openPage();
+      browser = newBrowser; // Assign to outer scope browser
 
-    await scrapeJobsLinkedin(page, {
-      jobDescription: searchTerm,
-      location,
-      searchId,
-      shouldLogin: true,
-      postsMaxAgeSeconds: maxAge,
-    });
+      // Don't need this. Never worked. Could be revived one day if I feel like it or need it.
+      // await captureAndSaveResponses(page, ScrapingSource.LinkedIn);
+      // await mockResponses(page, ScrapingSource.LinkedIn);
+
+      await scrapeJobsLinkedin(page, {
+        jobDescription: searchTerm,
+        location,
+        searchId,
+        shouldLogin: true,
+        postsMaxAgeSeconds: maxAge,
+      });
+    } finally {
+      if (browser) {
+        log(`Closing browser for LinkedIn job scraping (search term: ${searchTerm})...`);
+        await browser.close();
+      }
+    }
   }
 
-  console.log(`Scraping completed in ${getElapsedTime(timeStarted)}`);
+  log(`Scraping completed in ${getElapsedTime(timeStarted)}`); // Using log
 };

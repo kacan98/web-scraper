@@ -1,6 +1,7 @@
 import { DEV_MODE } from "envVars";
 import { processStarted } from "index";
-import { Page } from "playwright";
+import { Browser, Page } from "playwright"; // Imported Browser
+import inquirer from 'inquirer';
 import { chromium } from "playwright-extra";
 import extraPluginStealth from "puppeteer-extra-plugin-stealth";
 
@@ -72,10 +73,10 @@ export const flipACoin = (probabilityForSuccess: number = 0.5) => {
   return Math.random() < probabilityForSuccess;
 };
 
-export const openPage = async (): Promise<Page> => {
+export const openPage = async (): Promise<{ page: Page; browser: Browser }> => {
   const browser = await chromium.launch({ headless: !DEV_MODE });
   const page = await browser.newPage();
-  return page;
+  return { page, browser };
 };
 
 export const LOGGING_ENABLED = true;
@@ -140,4 +141,37 @@ export const removeNewLinesAndDoubleSpaces = (obj: { [key: string]: any }): void
       }
     });
   }
+}
+
+export async function getCliArgOrPrompt<T>(
+  parsedArgs: any,
+  argNameOrAlias: string,
+  promptOptions: inquirer.QuestionCollection<{ [key: string]: T }>
+): Promise<T> {
+  if (parsedArgs[argNameOrAlias]) {
+    return parsedArgs[argNameOrAlias];
+  }
+
+  // Ensure promptOptions.name is defined
+  let questionName = '';
+  if (typeof promptOptions === 'object' && !Array.isArray(promptOptions)) {
+    questionName = promptOptions.name || 'prompt_choice';
+    promptOptions.name = questionName;
+  } else if (Array.isArray(promptOptions) && promptOptions.length > 0) {
+    questionName = promptOptions[0].name || 'prompt_choice';
+    promptOptions[0].name = questionName;
+  } else {
+    // This case should ideally not happen if promptOptions is well-defined
+    questionName = 'prompt_choice';
+    if (Array.isArray(promptOptions) && promptOptions.length === 0) {
+      // Need to create a question if promptOptions is an empty array
+      // For simplicity, using a generic text input. Adjust as needed.
+      promptOptions.push({ type: 'input', name: questionName, message: `Enter value for ${argNameOrAlias}:` });
+    } else if (typeof promptOptions === 'object' && !Array.isArray(promptOptions) && !promptOptions.name) {
+      // if promptOptions is a single question object without a name
+       promptOptions = { ...promptOptions, name: questionName, message: `Enter value for ${argNameOrAlias}:` }
+    }
+  }
+  const answers = await inquirer.prompt(promptOptions);
+  return answers[questionName];
 }
