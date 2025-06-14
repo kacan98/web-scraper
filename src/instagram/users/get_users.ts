@@ -79,21 +79,22 @@ export const scrapeUsersFromAccount = async ({
       await page.getByRole("link", { name: extractionType }).click();
     }
 
-    log(`waiting for ${extractionType} to load`);
-    const usersRes = await usersPromise;
-    let statusesRes = await statusesPromise;
-
-    log(`${extractionType} loaded`);
-    const followers: Followers = await usersRes.json();
-    const followingStatuses: IGStatuses = await statusesRes.json();
-
-    // users.push(...followers.users);
-    // statuses = { ...statuses, ...followingStatuses.friendship_statuses };
-
-    // saveUsersLocally(users);
-    // saveStatusesLocally(statuses);
-
     try {
+      log(`waiting for ${extractionType} to load`);
+      const usersRes = await usersPromise;
+      let statusesRes = await statusesPromise;
+
+      log(`${extractionType} loaded`);
+      const followers: Followers = await usersRes.json();
+      const followingStatuses: IGStatuses = await statusesRes.json();
+
+      // users.push(...followers.users);
+      // statuses = { ...statuses, ...followingStatuses.friendship_statuses };
+
+      // saveUsersLocally(users);
+      // saveStatusesLocally(statuses);
+
+
       usersUpdated +=
         (await saveUsersInDb(followers.users, accountToScrape)) || 0;
 
@@ -115,8 +116,7 @@ export const scrapeUsersFromAccount = async ({
       log(`So far ${usersUpdated} users and ${statusesUpdated} statuses updated`);
 
       //make sure we don't do too many requests too fast
-      log("waiting");
-      await sleepApprox(page, 1500);
+      await sleepApprox(page, 1500, false, 'not getting blocked');
 
       log('scrolling down to load more "followers"');
       // try to scroll down to trigger infinite scroll
@@ -125,7 +125,12 @@ export const scrapeUsersFromAccount = async ({
       log(`scrolled ${scrolledSuccessfully ? "" : "⚠ UN"}successfully`);
 
       if (!scrolledSuccessfully) {
-        moreToLoad = false;
+        const scrolledSuccessfully = await scrollDown(page);
+        if (!scrolledSuccessfully) {
+          moreToLoad = false;
+        } else {
+          log("scrolled down again");
+        }
       }
 
     } catch (e) {

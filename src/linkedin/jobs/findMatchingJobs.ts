@@ -1,6 +1,6 @@
 import { db } from "db";
 import { linkedInJobPostsTable, skillTable, skillJobMappingTable, jobAiAnalysisTable } from "db/schema/linkedin/linkedin-schema";
-import { and, desc, eq, exists, inArray, isNull, lt, not, or } from "drizzle-orm";
+import { and, desc, eq, exists, gt, inArray, isNull, lt, not, or } from "drizzle-orm";
 import { ilike } from "drizzle-orm";
 import { showImportantInfoRowsInBrowser } from "./showJobsInHtmlReport";
 
@@ -12,10 +12,11 @@ export const findMatchingJobsForKarel = async () => {
         maxYearsOfExperienceRequired: 4,
         includeInternships: false,
         acceptablePosition: ['frontend', 'full-stack'],
+        maxDaysOld: 5,
     });
 
-    console.log('Found jobs: ', jobs.length);
-    const importantInfoRows = (jobs.map((j) => {
+    // Create important info rows for display
+    const importantInfoRows = jobs.map((j) => {
         return {
             title: j.job_posts.title,
             location: j.job_posts.location,
@@ -29,7 +30,7 @@ export const findMatchingJobsForKarel = async () => {
             linkedinId: j.job_posts.linkedinId,
             jobScraped: j.job_posts.dateScraped
         }
-    }));
+    });
 
     showImportantInfoRowsInBrowser(importantInfoRows);
 }
@@ -67,6 +68,11 @@ export function getFilteredJobs({
     acceptablePosition: ('frontend' | 'backend' | 'full-stack')[]
 }
 ) {
+    // Calculate cutoff date for maxDaysOld
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - maxDaysOld);
+    const cutoffDateStr = cutoffDate.toISOString();
+
     const query = db
         .select()
         .from(linkedInJobPostsTable)
@@ -96,7 +102,10 @@ export function getFilteredJobs({
                     inArray(jobAiAnalysisTable.decelopmentSide, acceptablePosition),
                     isNull(jobAiAnalysisTable.decelopmentSide)
                 ) : undefined,
-                maxDaysOld ? lt(jobAiAnalysisTable.jobPosted, new Date(Date.now() - maxDaysOld * 24 * 60 * 60 * 1000).toISOString()) : undefined,
+                maxDaysOld ? or(
+                    isNull(jobAiAnalysisTable.jobPosted),
+                    gt(jobAiAnalysisTable.jobPosted, cutoffDateStr)
+                ) : undefined,
             )
         ).orderBy(desc(jobAiAnalysisTable.jobPosted))
 

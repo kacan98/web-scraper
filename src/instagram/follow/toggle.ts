@@ -74,7 +74,7 @@ export const followInstagramUsers = async ({ page }: { page: Page }) => {
 
     log("Still need to follow ", MAX_USERS_TO_FOLLOW - followedTodaySoFar);
 
-    await sleepApprox(page, 5000);
+    await sleepApprox(page, 5000, false, 'for page load');
 
     const notFound = await areWeOnDoesntExistPage(page);
     if (notFound) {
@@ -116,7 +116,7 @@ export const followInstagramUsers = async ({ page }: { page: Page }) => {
     try {
       await page.click("text=Follow", { timeout: 5000 });
 
-      await sleepApprox(page, 3000);
+      await sleepApprox(page, 3000, false, 'for following to go through');
       successfullyFollowed = true;
       followedTodaySoFar++;
     } catch (e) {
@@ -142,7 +142,7 @@ export const followInstagramUsers = async ({ page }: { page: Page }) => {
       errorLog(e, "⚠ Failed to like posts for user ", user.username);
     }
 
-    await sleepApprox(page, 3000);
+    await sleepApprox(page, 1000, false, 'making sure we don\'t get blocked');
   }
 
   log("Done");
@@ -241,14 +241,14 @@ const likeSomePosts = async (
 
   for (const like of postsToLike) {
     log(`${like ? "Liking" : "Not liking"} this post`);
-    await sleepApprox(page, randomInt(1000, 2000));
+    await sleepApprox(page, randomInt(1000, 2000), true);
 
     if (like) {
       //double click the image to like it
       await page.mouse.dblclick(430, 260);
     }
 
-    await sleepApprox(page, randomInt(500, 1200));
+    await sleepApprox(page, randomInt(500, 1200), true);
     //press the right arrow key to go to the next image
     page.keyboard.press("ArrowRight");
   }

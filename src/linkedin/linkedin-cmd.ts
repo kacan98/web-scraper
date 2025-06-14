@@ -34,7 +34,7 @@ export const linkedinMenu = async () => {
             ],
         });
 
-        action = result.action.a;
+        action = result.action;
     }
 
     switch (action) {
@@ -70,5 +70,7 @@ export const linkedinMenu = async () => {
         case LinkedinOptions.EXIT:
             console.log("Exiting...");
             break;
+        default:
+            throw new Error(`Unknown action: ${action}`);
     }
 };

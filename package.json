@@ -10,8 +10,11 @@
     "update-db-with-drizzle-schema": "npx drizzle-kit push --config ./drizzle.config.ts",
     "scrape-jobs-remote": "tsx index.ts -p LinkedIn -a Scrape_jobs -l Copenhagen -s TypeScript -m 86400",
     "scrape-jobs-remotely": "npm run scrape-jobs-remote",
-    "follow-instagram-users": "tsx index.ts -p Instagram -a SCRAPE_USERS -i emmabjorndahl",
-    "run-with-docker": "docker run --env-file .env -it --rm kcancara/web-scraper"
+    "instagram-scrape-users": "tsx index.ts -p Instagram -a SCRAPE_USERS -i emmabjorndahl",
+    "instagram-follow-users": "tsx index.ts -p Instagram -a FOLLOW_USERS",
+    "run-with-docker": "docker run --env-file .env -it --rm kcancara/web-scraper",
+    "test-job-criteria": "tsx src/linkedin/jobs/testCriteriaImpact.ts",
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
@@ -36,9 +39,12 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.46.1",
+    "@types/jest": "^29.5.14",
     "@types/node": "^22.5.0",
     "@types/pg": "^8.11.11",
     "drizzle-kit": "^0.30.5",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.2",
     "typescript": "^5.5.4"
