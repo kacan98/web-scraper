@@ -1,8 +1,24 @@
 import { db } from "db";
-import { linkedInJobPostsTable, skillTable, skillJobMappingTable, jobAiAnalysisTable } from "db/schema/linkedin/linkedin-schema";
-import { and, desc, eq, exists, gt, inArray, isNull, lt, not, or } from "drizzle-orm";
-import { ilike } from "drizzle-orm";
+import { jobAiAnalysisTable, linkedInJobPostsTable, skillJobMappingTable, skillTable } from "db/schema/linkedin/linkedin-schema";
+import { and, desc, eq, exists, gt, ilike, inArray, isNull, lt, not, or } from "drizzle-orm";
 import { showImportantInfoRowsInBrowser } from "./showJobsInHtmlReport";
+
+// Function to get skills for a specific job
+const getSkillsForJob = async (jobId: number) => {
+    const skills = await db
+        .select({
+            name: skillTable.name,
+            isRequired: skillJobMappingTable.isRequired
+        })
+        .from(skillJobMappingTable)
+        .leftJoin(skillTable, eq(skillTable.id, skillJobMappingTable.skillId))
+        .where(eq(skillJobMappingTable.jobId, jobId));
+
+    return {
+        required: skills.filter(s => s.isRequired).map(s => s.name),
+        optional: skills.filter(s => !s.isRequired).map(s => s.name)
+    };
+};
 
 export const findMatchingJobsForKarel = async () => {
     const jobs = await getFilteredJobs({
@@ -15,22 +31,25 @@ export const findMatchingJobsForKarel = async () => {
         maxDaysOld: 5,
     });
 
-    // Create important info rows for display
-    const importantInfoRows = jobs.map((j) => {
+    // Create enhanced info rows for display with cleaner, more relevant data
+    const importantInfoRows = await Promise.all(jobs.map(async (j) => {
+        const skills = await getSkillsForJob(j.job_posts.id);
+
         return {
             title: j.job_posts.title,
-            location: j.job_posts.location,
-            skills: j.job_posts.skills,
-            yearsOfExperienceExpected: j.job_ai_analysis?.yearsOfExperienceExpected,
-            seniorityLevel: j.job_ai_analysis?.seniorityLevel,
-            decelopmentSide: j.job_ai_analysis?.decelopmentSide,
-            workModel: j.job_ai_analysis?.workModel,
-            jobSumary: j.job_ai_analysis?.jobSummary,
-            jobPosted: j.job_ai_analysis?.jobPosted,
+            company: j.job_posts.company,
+            location: j.job_posts.location?.split('·')[0]?.trim() || j.job_posts.location, // Clean location
+            requiredSkills: skills.required.join(', ') || 'Not specified',
+            optionalSkills: skills.optional.slice(0, 5).join(', ') || 'None', // Limit to 5 to avoid clutter
+            yearsExp: j.job_ai_analysis?.yearsOfExperienceExpected || 'Not specified',
+            seniority: j.job_ai_analysis?.seniorityLevel || 'Not specified',
+            position: j.job_ai_analysis?.decelopmentSide || 'Not specified',
+            workModel: j.job_ai_analysis?.workModel || 'Not specified',
+            summary: j.job_ai_analysis?.jobSummary || 'No summary available',
+            posted: j.job_ai_analysis?.jobPosted || 'Unknown',
             linkedinId: j.job_posts.linkedinId,
-            jobScraped: j.job_posts.dateScraped
         }
-    });
+    }));
 
     showImportantInfoRowsInBrowser(importantInfoRows);
 }
