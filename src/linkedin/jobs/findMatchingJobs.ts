@@ -23,7 +23,7 @@ const getSkillsForJob = async (jobId: number) => {
 export const findMatchingJobsForKarel = async () => {
     const jobs = await getFilteredJobs({
         includeJobsWithSkills: ["TypeScript", "Angular", "React", "C#", ".NET", "Node.js", "JavaScript", 'x++'],
-        removeJobsWithSkills: ["Java", "AWS", "Python", "Ruby", "PHP", "Kotlin", "Golang", "Scala", "Rust", "Swift", "Objective-C", "Ruby on Rails"],
+        removeJobsWithSkills: ["Java", "AWS", "Python", "Ruby", "PHP", "Kotlin", "Golang", "Scala", "Rust", "Swift", "Objective-C", "Ruby on Rails", "Django"],
         acceptableSeniorityLevels: ['mid', 'junior', 'senior'],
         maxYearsOfExperienceRequired: 4,
         includeInternships: false,
@@ -33,9 +33,7 @@ export const findMatchingJobsForKarel = async () => {
 
     // Create enhanced info rows for display with cleaner, more relevant data
     const importantInfoRows = await Promise.all(jobs.map(async (j) => {
-        const skills = await getSkillsForJob(j.job_posts.id);
-
-        return {
+        const skills = await getSkillsForJob(j.job_posts.id); return {
             title: j.job_posts.title,
             company: j.job_posts.company,
             location: j.job_posts.location?.split('·')[0]?.trim() || j.job_posts.location, // Clean location
@@ -47,6 +45,7 @@ export const findMatchingJobsForKarel = async () => {
             workModel: j.job_ai_analysis?.workModel || 'Not specified',
             summary: j.job_ai_analysis?.jobSummary || 'No summary available',
             posted: j.job_ai_analysis?.jobPosted || 'Unknown',
+            numberOfApplicants: j.job_ai_analysis?.numberOfApplicants,
             linkedinId: j.job_posts.linkedinId,
         }
     }));

@@ -44,7 +44,20 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
             content = content.substring(0, 200) + '...';
           }
         } else if (key === 'requiredSkills' || key === 'optionalSkills') {
-          className = 'skills';        } else if (key === 'posted') {
+          className = 'skills';
+        } else if (key === 'numberOfApplicants') {
+          className = 'applicants';
+          // Format the number of applicants nicely
+          if (typeof content === 'number' && content > 0) {
+            if (content >= 1000) {
+              content = (content / 1000).toFixed(1) + 'k+';
+            } else {
+              content = content + '+';
+            }
+          } else if (!content) {
+            content = 'N/A';
+          }
+        } else if (key === 'posted') {
           // Format the date if it's a valid date
           if (content && content !== 'Unknown' && typeof content === 'string') {
             try {
@@ -124,10 +137,15 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
           tr:hover { background-color: #f0f8ff; }
           a { color: #0066cc; text-decoration: none; }
           a:hover { text-decoration: underline; }
-          .summary { max-width: 300px; font-size: 0.9em; }
-          .skills { font-size: 0.85em; color: #666; }
+          .summary { max-width: 300px; font-size: 0.9em; }          .skills { font-size: 0.85em; color: #666; }
           .company { font-weight: bold; color: #333; }
           .location { color: #666; font-size: 0.9em; }
+          .applicants {
+            font-weight: bold;
+            color: #e67e22;
+            text-align: center;
+            font-size: 0.9em;
+          }
           .filter-controls {
             margin: 20px 0;
             padding: 15px;

@@ -270,7 +270,7 @@ async function search(
   page: Page,
   _jobDescription: string,
   _location: string,
-  postsMaxAgeSeconds: number = postAgeMap['week']
+  postsMaxAgeSeconds: number = postAgeMap['24 hours']
 ) {
   const elements = await tryToFindElementsFromSelectors(
     page,

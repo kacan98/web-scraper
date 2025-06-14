@@ -42,11 +42,11 @@ async function getRatedJobIds(mySkills: Record<string, number>) {
       location: linkedInJobPostsTable.location,
       skills: linkedInJobPostsTable.skills,
       yearsOfExperienceExpected: jobAiAnalysisTable.yearsOfExperienceExpected,
-      seniorityLevel: jobAiAnalysisTable.seniorityLevel,
-      decelopmentSide: jobAiAnalysisTable.decelopmentSide,
+      seniorityLevel: jobAiAnalysisTable.seniorityLevel, decelopmentSide: jobAiAnalysisTable.decelopmentSide,
       workModel: jobAiAnalysisTable.workModel,
       jobSumary: jobAiAnalysisTable.jobSummary,
       jobPosted: jobAiAnalysisTable.jobPosted,
+      numberOfApplicants: jobAiAnalysisTable.numberOfApplicants,
       requiredSkills: sql<string>`array_agg(${skillTable.name})`.as("required_skills"),
 
     })
@@ -59,15 +59,15 @@ async function getRatedJobIds(mySkills: Record<string, number>) {
         eq(skillJobMappingTable.isRequired, true)
       )
     )
-    .leftJoin(skillTable, eq(skillTable.id, skillJobMappingTable.skillId))
-    .groupBy(
+    .leftJoin(skillTable, eq(skillTable.id, skillJobMappingTable.skillId)).groupBy(
       linkedInJobPostsTable.id,
       jobAiAnalysisTable.jobPosted,
       jobAiAnalysisTable.yearsOfExperienceExpected,
       jobAiAnalysisTable.seniorityLevel,
       jobAiAnalysisTable.decelopmentSide,
       jobAiAnalysisTable.workModel,
-      jobAiAnalysisTable.jobSummary
+      jobAiAnalysisTable.jobSummary,
+      jobAiAnalysisTable.numberOfApplicants
     )
     .having(sql`
       SUM(CASE WHEN ${skillTable.name} 
