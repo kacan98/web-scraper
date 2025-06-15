@@ -1,16 +1,17 @@
-import { Page } from "playwright-core";
 import { log } from "console";
-import { LinkedinJobPostTable } from "db/schema/linkedin/linkedin-schema";
+import { JobPost } from "db/schema/generic/job-schema";
+import { DEV_MODE } from "envVars";
 import { ScrapingSource } from "model";
-import { login } from "src/instagram/instagram-utils";
+import { Page } from "playwright-core";
+import { getCookies } from "src/login";
 import {
   extractText,
   findFunctioningSelector,
   tryToFindElementFromSelectors,
   tryToFindElementsFromSelectors,
 } from "src/searchForElements";
-import { markJobAsInSearch, saveLinkedinJobInDb } from "./jobs.db";
 import { sleepApprox } from "src/utils";
+import { markJobAsInSearch, saveJobInDb } from "../generic/job-db";
 
 const ONE_HOUR = 60 * 60 * 1000;
 const THREE_MINUTES = 3 * 60 * 1000;
@@ -28,41 +29,91 @@ export const scrapeJobsLinkedin = async (
     location: string;
     searchId: number;
     shouldLogin?: boolean;
-      postsMaxAgeSeconds?: number;
+    postsMaxAgeSeconds?: number;
   }
 ) => {
   page.setDefaultTimeout(THREE_MINUTES);
-  if (shouldLogin) {
-    log('Trying to log in');
-    await login({ page, platform: ScrapingSource.LinkedIn });
-  } else {
-    //dismiss prompt to log in
-    //aria-label="Dismiss"
-    const dismissButton = await page.$("button[aria-label='Dismiss']");
-    if (dismissButton) {
-      await dismissButton.click();
+
+  // Always try to load saved cookies first
+  log('Loading saved cookies and navigating to LinkedIn jobs...');
+  try {
+    const cookies = await getCookies({ platform: ScrapingSource.LinkedIn });
+    await page.context().addCookies(cookies);
+    log('Cookies loaded, navigating to jobs page');
+  } catch (error) {
+    log('No saved cookies found or error loading cookies:', error);
+    if (shouldLogin) {
+      log('Will proceed with manual login if needed');
+    }
+  }  // Navigate directly to LinkedIn jobs page
+  await page.goto('https://www.linkedin.com/jobs/search/');
+  console.log('🔍 Navigation completed, waiting for page load...');
+  await page.waitForTimeout(1000);
+  // Wait for the page to be fully loaded
+  try {
+    await page.waitForLoadState('networkidle', { timeout: 3000 });
+    console.log('🔍 Page fully loaded');
+  } catch (error) {
+    console.log('⚠️ Page load timeout (3s), continuing anyway...');
+  } console.log('🔍 Checking for dismiss button...');
+  if (!shouldLogin) {
+    // Dismiss prompt to log in if not using cookies
+    try {
+      await page.waitForSelector("button[aria-label='Dismiss']", { timeout: 5000 });
+      const dismissButton = await page.$("button[aria-label='Dismiss']");
+      if (dismissButton) {
+        console.log('🔍 Found dismiss button, clicking...');
+        await dismissButton.click();
+      }
+    } catch (error) {
+      console.log('🔍 No dismiss button found or timed out');
+    }
+  }  console.log('🔍 Checking login status...');
+  console.log('🔍 Current page URL:', page.url());
+  console.log('🔍 Page title:', await page.title());
+  
+  // Take a screenshot for debugging if in dev mode
+  if (DEV_MODE) {
+    try {
+      await page.screenshot({ path: 'linkedin-debug.png', fullPage: false });
+      console.log('🔍 Debug screenshot saved as linkedin-debug.png');
+    } catch (error) {
+      console.log('🔍 Could not take screenshot:', error);
     }
   }
-
-  // check if we are logged in by searching for "Sign in" or "Continue with Google"
-  const signInButton = await page.$(
-    "button[aria-label='Sign in'] , button[aria-label='Continue with Google']"
-  );
+  
+  // Check if we are logged in by searching for "Sign in" or "Continue with Google"
+  let signInButton;
+  try {
+    await page.waitForSelector("button[aria-label='Sign in'], button[aria-label='Continue with Google'], a:has-text('Sign in')", { timeout: 5000 });
+    signInButton = await page.$("button[aria-label='Sign in'], button[aria-label='Continue with Google'], a:has-text('Sign in')");
+    console.log('🔍 Found sign-in button/link, not logged in');
+  } catch (error) {
+    console.log('🔍 No sign in button found, checking for other login indicators...');
+    
+    // Check for other login indicators
+    const loginForm = await page.$('form[data-id="sign-in-form"]');
+    const emailField = await page.$('input[type="email"], input[name="session_key"]');
+    
+    if (loginForm || emailField) {
+      console.log('🔍 Found login form, not logged in');
+      signInButton = true; // Treat as if sign-in button was found
+    } else {
+      console.log('🔍 No login indicators found, assuming logged in');
+      signInButton = null;
+    }
+  }
 
   if (signInButton) {
     log("Not logged in. Please log in to LinkedIn.");
     return;
   }
-
-
   log("Login successful");
 
-  await page.goto(`https://www.linkedin.com/jobs/search/`);
-
-  await search(page, jobDescription, location, postsMaxAgeSeconds);
+  console.log('🔍 About to call search function...'); await search(page, jobDescription, location, postsMaxAgeSeconds);
   log("Search done");
 
-  await page.waitForTimeout(5000); // wait for the page to load
+  await page.waitForTimeout(3000); // wait for the page to load
 
   let jobCardsSelector = await findFunctioningSelector(
     page,
@@ -157,7 +208,7 @@ const scrapeAllJobsOnPage = async (
       await sleepApprox(page, 1500, false, 'for the job details to load');
 
       const job = await extractJob(page);
-      const { upsertResult, insertedNewLine } = await saveLinkedinJobInDb(job);
+      const { upsertResult, insertedNewLine } = await saveJobInDb(job, 'linkedin');
       if (insertedNewLine) {
         newJobsFound++;
       }
@@ -199,7 +250,7 @@ const findNextPageAndNavigateToItIfItExists = async (
   return undefined;
 };
 
-const extractJob = async (page: Page): Promise<Omit<LinkedinJobPostTable, 'id'>> => {
+const extractJob = async (page: Page): Promise<Omit<JobPost, 'id' | 'dateScraped' | 'sourceId'>> => {
   //wait until h1 is visible
   await waitForAtLeastOneSelector(
     page,
@@ -231,7 +282,8 @@ const extractJob = async (page: Page): Promise<Omit<LinkedinJobPostTable, 'id'>>
     location: await extractText(location),
     jobDetails: await extractText(jobDetails),
     skills: await extractText(skills, false),
-    linkedinId: jobId
+    externalId: jobId,
+    originalUrl: url
   };
 };
 
@@ -241,9 +293,33 @@ export const linkedinJobSelectors = {
   searchInput: [
     '[aria-label="Search by title, skill, or company"]',
     'input[aria-label="Search job titles or companies"]',
+    'input[aria-label*="Search by title"]',
+    'input[aria-label*="Search job titles"]',
+    'input[placeholder*="Search job titles"]',
+    'input[aria-label*="job title"]',
+    'input[id*="jobs-search-box-keyword"]',
+    '.jobs-search-box__text-input[aria-label*="Search"]',
+    'input[data-test-id*="jobs-search-keywords"]'
   ],
-  locationInput: ["input[aria-label='City, state, or zip code']"],
-  buttonSearch: ["button.jobs-search-box__submit-button"],
+  locationInput: [
+    "input[aria-label='City, state, or zip code']",
+    'input[aria-label*="City, state"]',
+    'input[aria-label*="Location"]',
+    'input[placeholder*="City, state"]',
+    'input[id*="jobs-search-box-location"]',
+    '.jobs-search-box__text-input[aria-label*="Location"]',
+    'input[data-test-id*="jobs-search-location"]'
+  ],
+  buttonSearch: [
+    "button.jobs-search-box__submit-button",
+    'button[aria-label*="Search"]',
+    'button[data-test-id*="jobs-search-submit"]',
+    '.jobs-search-box__submit-button',
+    'button:has-text("Search")',
+    'button[type="submit"]',
+    '.search-button',
+    '[role="button"]:has-text("Search")'
+  ],
   jobDetails: {
     jobTitle: ["h1"],
     company: ["div.job-details-jobs-unified-top-card__company-name"],
@@ -252,11 +328,13 @@ export const linkedinJobSelectors = {
     ],
     jobDetails: ["#job-details"],
     skills: ["#how-you-match-card-container", ".job-details-how-you-match__skills-section-descriptive-skill"],
-  },
-  jobCard: [
+  }, jobCard: [
     'a.job-card-container__link[href*="/jobs/view/"]',
     'a[data-control-id][href*="/jobs/view/"]',
     'a[aria-label][href*="/jobs/view/"]',
+    '.job-card-container a[href*="/jobs/view/"]',
+    '[data-entity-urn*="job"] a[href*="/jobs/view/"]',
+    '.jobs-search-results-list a[href*="/jobs/view/"]'
   ],
 };
 
@@ -268,45 +346,72 @@ const postAgeMap = {
 
 async function search(
   page: Page,
-  _jobDescription: string,
-  _location: string,
+  jobDescription: string,
+  location: string,
   postsMaxAgeSeconds: number = postAgeMap['24 hours']
-) {
-  const elements = await tryToFindElementsFromSelectors(
-    page,
-    {
-      searchInput: linkedinJobSelectors.searchInput,
-      searchButton: linkedinJobSelectors.buttonSearch,
-      locationInput: linkedinJobSelectors.locationInput,
-    },
-    {
-      allOrNothing: true,
-    }
-  );
+) {  console.log('🔍 Starting search function...');
+  console.log('🔍 Looking for search elements...');
+  
+  // Add a timeout wrapper for finding elements
+  let elements;
+  try {
+    const timeoutPromise: Promise<never> = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout finding search elements')), 15000)
+    );
+
+    const findElementsPromise = tryToFindElementsFromSelectors(
+      page,
+      {
+        searchInput: linkedinJobSelectors.searchInput,
+        searchButton: linkedinJobSelectors.buttonSearch,
+        locationInput: linkedinJobSelectors.locationInput,
+      },
+      {
+        allOrNothing: true,
+      }
+    );
+
+    elements = await Promise.race([findElementsPromise, timeoutPromise]);
+  } catch (error) {
+    console.error('🚫 Error finding search elements:', (error as Error).message);
+    console.log('📄 Current page URL:', page.url());
+    console.log('📄 Page title:', await page.title());
+    throw error;
+  }
+
+  console.log('🔍 Elements found:', !!elements);
 
   if (!elements) throw new Error("Search elements not found");
 
   const { searchInput, searchButton, locationInput } = elements;
 
-  console.log('')
-  await searchInput.fill(_jobDescription, {
+  console.log('Filling job description...')
+  await searchInput.fill(jobDescription, {
     timeout: 10000,
   });
   console.log('Job description filled in');
-  //fill in location a character at a time
-  await locationInput.fill(_location, {
+
+  console.log('Filling location...')
+  await locationInput.fill(location, {
     timeout: 10000,
   });
   console.log('Location filled in');
-  //make sure that the location is found by linkedin
+
+  console.log('Clicking search button...')
   await searchButton.click();
 
-  //check if the first word of the search is in the url
-  const firstWord = _jobDescription.split(" ")[0];
+  // Check if the first word of the search is in the url
+  const firstWord = jobDescription.split(" ")[0];
   const urlRegex = new RegExp(`.*${firstWord}.*`);
-  await page.waitForURL(urlRegex, {
-    timeout: 10000
-  });
+
+  try {
+    await page.waitForURL(urlRegex, {
+      timeout: 10000
+    });
+    console.log('✅ Search results loaded successfully');
+  } catch (error) {
+    console.log('⚠️ URL didn\'t change as expected, but continuing...');
+  }
 
   if (postsMaxAgeSeconds) {
     try {

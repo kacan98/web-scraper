@@ -20,7 +20,7 @@ export const GeminiJobExtractionSchema = {
             enum: ["junior", "mid", "senior", "lead"],
             nullable: true,
         },
-        decelopmentSide: {
+        developmentSide: {
             type: SchemaType.STRING,
             format: "enum",
             enum: ["frontend", "full-stack", "backend", "other"],

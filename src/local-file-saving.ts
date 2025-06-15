@@ -84,8 +84,25 @@ export const saveInFile = async (
   return filePath;
 };
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Handle both runtime and test environments
+let currentFileDir: string;
+let currentFileName: string;
+try {
+  // Use dynamic import to avoid TypeScript import.meta issues in test environment
+  const importMeta = eval('import.meta') as { url?: string };
+  if (importMeta?.url) {
+    currentFileName = fileURLToPath(importMeta.url);
+    currentFileDir = dirname(currentFileName);
+  } else {
+    // Fallback for test environment
+    currentFileDir = process.cwd();
+    currentFileName = __filename;
+  }
+} catch {
+  // Fallback for test environment or when import.meta is not available
+  currentFileDir = process.cwd();
+  currentFileName = 'local-file-saving.ts';
+}
 const currentFilenameFriendlyDateTime = getFilenameFriendlyDateTime();
 const getFileNameForFunctionSaveInFile = (
   pathFromRoot: string,
@@ -103,7 +120,7 @@ const getFileNameForFunctionSaveInFile = (
   // that's why we need the "../" in the path.resolve
   // It sucks and I hate it but I don't have more patience to deal with this.
   const filePath = path.resolve(
-    __dirname,
+    currentFileDir,
     "../",
     pathFromRoot,
     completeFileName

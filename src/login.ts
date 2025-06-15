@@ -1,4 +1,4 @@
-import dotenv from "dotenv";
+import * as dotenv from "dotenv";
 import { DEV_MODE } from "envVars";
 import fs from "fs";
 import inquirer from "inquirer";
@@ -10,8 +10,22 @@ import { log } from "src/utils";
 import { fileURLToPath } from "url";
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Handle both runtime and test environments
+let currentDir: string;
+try {
+  // Use dynamic import to avoid TypeScript import.meta issues in test environment
+  const importMeta = eval('import.meta') as { url?: string };
+  if (importMeta?.url) {
+    const __filename = fileURLToPath(importMeta.url);
+    currentDir = dirname(__filename);
+  } else {
+    // Fallback for test environment
+    currentDir = process.cwd();
+  }
+} catch {
+  // Fallback for test environment
+  currentDir = process.cwd();
+}
 
 const IG_LOGIN = process.env.IG_LOGIN;
 const IG_PASSWORD = process.env.IG_PASSWORD;
@@ -34,7 +48,7 @@ const platformSpecifics: {
   };
 } = {
   [ScrapingSource.Instagram]: {
-    pathToCookies: "../../instagram-cookies.json",
+    pathToCookies: "./instagram-cookies.json",
     loginUrl: "https://www.instagram.com",
     selectors: {
       afterNavigateButton: 'text="Allow all cookies"',
@@ -44,9 +58,8 @@ const platformSpecifics: {
     },
     password: IG_PASSWORD,
     username: IG_LOGIN,
-  },
-  [ScrapingSource.LinkedIn]: {
-    pathToCookies: "../../linkedin-cookies.json",
+}, [ScrapingSource.LinkedIn]: {
+  pathToCookies: "./linkedin-cookies.json",
     loginUrl: "https://www.linkedin.com/login",
     selectors: {
       username: 'input[id="username"]',
@@ -64,19 +77,25 @@ export const getCookies = async ({
   platform: ScrapingSource;
 }): Promise<Cookie[]> => {
   let cookies: Cookie[] | undefined;
-
   const cookiesPath = path.resolve(
-    __dirname,
+    currentDir,
     platformSpecifics[platform].pathToCookies
   );
+
+  console.log(`🔍 Looking for cookies at: ${cookiesPath}`);
+  console.log(`🔍 Current directory: ${currentDir}`);
+  console.log(`🔍 Relative path: ${platformSpecifics[platform].pathToCookies}`);
 
   if (fs.existsSync(cookiesPath)) {
     console.log("Cookies file found, loading cookies...");
     cookies = JSON.parse(fs.readFileSync(cookiesPath, "utf8"));
+    console.log(`✅ Loaded ${cookies?.length || 0} cookies from file`);
+  } else {
+    console.log("❌ No cookies file found");
   }
 
-
   if (!cookies || cookies.length < 4) {
+    console.log(`🔄 Need to login manually - cookies: ${cookies ? cookies.length : 'none'}`);
     const browser = await chromium.launch({ headless: !DEV_MODE });
     const context = await browser.newContext();
     const page = await context.newPage();
@@ -85,6 +104,8 @@ export const getCookies = async ({
 
     fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
     await browser.close();
+  } else {
+    console.log(`✅ Using existing ${cookies.length} cookies, skipping manual login`);
   }
 
   //even if we don't need to log in, we still get some cookies

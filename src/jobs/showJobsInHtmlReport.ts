@@ -1,20 +1,34 @@
-import http from 'http';
 import { execSync } from 'child_process';
-import { jobAiAnalysisTable, linkedInJobPostsTable } from 'db/schema/linkedin/linkedin-schema';
+import http from 'http';
 
-type NullablePartial<T> = {
-  [K in keyof T]?: T[K] | null;
-};
+// Generic type that can handle any job data structure
+type ImportantInfoRow = {
+  [key: string]: any;
+}
 
-type ImportantInfoRow = NullablePartial<(typeof jobAiAnalysisTable.$inferSelect & typeof linkedInJobPostsTable.$inferSelect)>
-type ImportantInfoRowWithUrl = ImportantInfoRow & { url: string };
+type ImportantInfoRowWithUrl = ImportantInfoRow & { url?: string };
+
 export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfoRow[]): void {
-  //add url to each row
-  const importantInfoRows: (ImportantInfoRowWithUrl)[] = _importantInfoRows.map((row) => {
+  // Add URL to each row based on the source
+  const importantInfoRows: ImportantInfoRowWithUrl[] = _importantInfoRows.map((row) => {
+    let url = '';
+    
+    // Handle different sources
+    if (row.originalUrl) {
+      url = row.originalUrl;
+    } else if (row.linkedinId) {
+      url = `https://www.linkedin.com/jobs/search/?currentJobId=${row.linkedinId}`;
+    } else if (row.externalId && row.source === 'linkedin') {
+      url = `https://www.linkedin.com/jobs/search/?currentJobId=${row.externalId}`;
+    } else if (row.source === 'jobindex') {
+      // JobIndex URLs might be in originalUrl or we create a search URL
+      url = row.originalUrl || `https://www.jobindex.dk/jobsoegning?q=${encodeURIComponent(row.title || '')}`;
+    }
+    
     return {
       ...row,
-      url: `https://www.linkedin.com/jobs/search/?currentJobId=${row.linkedinId}`
-    }
+      url
+    };
   });
   
   if(importantInfoRows.length === 0) {
@@ -22,7 +36,9 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
     return
   }
 
-  const columnNames = Object.keys(importantInfoRows[0]);  const getColumns = (row: ImportantInfoRowWithUrl) => {
+  const columnNames = Object.keys(importantInfoRows[0]);
+
+  const getColumns = (row: ImportantInfoRowWithUrl) => {
     const columns = Object.entries(row).map(([key, value]) => {
       if (key === 'url') {
         return ''
@@ -37,6 +53,10 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
           className = 'company';
         } else if (key === 'location') {
           className = 'location';
+        } else if (key === 'source') {
+          className = 'source';
+          // Capitalize the source name
+          content = typeof content === 'string' ? content.charAt(0).toUpperCase() + content.slice(1) : content;
         } else if (key === 'summary') {
           className = 'summary';
           // Truncate summary if too long
@@ -69,6 +89,18 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
               // Keep original content if date parsing fails
             }
           }
+        } else if (key === 'adjustedScore' || key === 'baseRating') {
+          className = 'score';
+          // Format scores nicely
+          if (typeof content === 'number') {
+            content = content.toFixed(1);
+          }
+        } else if (key === 'scoringFormula') {
+          className = 'formula';
+          // Make formula more readable
+          if (typeof content === 'string' && content.length > 100) {
+            content = content.substring(0, 100) + '...';
+          }
         }
         
         const classAttr = className ? ` class="${className}"` : '';
@@ -87,7 +119,9 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
         </tr>
       `;
     })
-    .join('');  const html = `
+    .join('');
+
+  const html = `
     <html>
       <head>
         <meta charset="utf-8" />
@@ -137,9 +171,27 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
           tr:hover { background-color: #f0f8ff; }
           a { color: #0066cc; text-decoration: none; }
           a:hover { text-decoration: underline; }
-          .summary { max-width: 300px; font-size: 0.9em; }          .skills { font-size: 0.85em; color: #666; }
+          .summary { max-width: 300px; font-size: 0.9em; }
+          .skills { font-size: 0.85em; color: #666; }
           .company { font-weight: bold; color: #333; }
           .location { color: #666; font-size: 0.9em; }
+          .source { 
+            font-weight: bold; 
+            color: #9b59b6; 
+            text-align: center;
+            font-size: 0.9em;
+          }
+          .score {
+            font-weight: bold;
+            color: #27ae60;
+            text-align: center;
+            font-size: 1.1em;
+          }
+          .formula {
+            font-size: 0.8em;
+            color: #7f8c8d;
+            font-family: monospace;
+          }
           .applicants {
             font-weight: bold;
             color: #e67e22;
@@ -195,7 +247,7 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
               let aVal = a.cells[columnIndex].textContent.trim();
               let bVal = b.cells[columnIndex].textContent.trim();
               
-              // Handle numeric values (years of experience, dates)
+              // Handle numeric values (years of experience, dates, scores)
               const aNum = parseFloat(aVal);
               const bNum = parseFloat(bVal);
               if (!isNaN(aNum) && !isNaN(bNum)) {
@@ -227,6 +279,7 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
             const titleFilter = document.getElementById('titleFilter').value.toLowerCase();
             const companyFilter = document.getElementById('companyFilter').value.toLowerCase();
             const locationFilter = document.getElementById('locationFilter').value.toLowerCase();
+            const sourceFilter = document.getElementById('sourceFilter').value.toLowerCase();
             const seniorityFilter = document.getElementById('seniorityFilter').value.toLowerCase();
             const workModelFilter = document.getElementById('workModelFilter').value.toLowerCase();
             
@@ -235,15 +288,25 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
             
             for (let i = 0; i < rows.length; i++) {
               const cells = rows[i].cells;
-              const title = cells[0].textContent.toLowerCase();
-              const company = cells[1].textContent.toLowerCase();
-              const location = cells[2].textContent.toLowerCase();
-              const seniority = cells[6].textContent.toLowerCase();
-              const workModel = cells[8].textContent.toLowerCase();
+              const title = (cells[0]?.textContent || '').toLowerCase();
+              const company = (cells[1]?.textContent || '').toLowerCase();
+              const location = (cells[2]?.textContent || '').toLowerCase();
+              
+              // Find source, seniority, and work model columns (positions may vary)
+              let source = '', seniority = '', workModel = '';
+              for (let j = 0; j < cells.length; j++) {
+                const cellText = (cells[j]?.textContent || '').toLowerCase();
+                const header = document.querySelectorAll('th')[j]?.textContent.toLowerCase() || '';
+                
+                if (header.includes('source')) source = cellText;
+                if (header.includes('seniority')) seniority = cellText;
+                if (header.includes('work') && header.includes('model')) workModel = cellText;
+              }
               
               const show = title.includes(titleFilter) &&
                           company.includes(companyFilter) &&
                           location.includes(locationFilter) &&
+                          (sourceFilter === '' || source.includes(sourceFilter)) &&
                           (seniorityFilter === '' || seniority.includes(seniorityFilter)) &&
                           (workModelFilter === '' || workModel.includes(workModelFilter));
               
@@ -255,13 +318,15 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
             document.getElementById('titleFilter').value = '';
             document.getElementById('companyFilter').value = '';
             document.getElementById('locationFilter').value = '';
+            document.getElementById('sourceFilter').value = '';
             document.getElementById('seniorityFilter').value = '';
             document.getElementById('workModelFilter').value = '';
             filterTable();
           }
         </script>
-      </head>      <body>
-        <h1>Jobs Summary - ${importantInfoRows.length} matching jobs</h1>
+      </head>
+      <body>
+        <h1>Rated Jobs Summary - ${importantInfoRows.length} matching jobs</h1>
         
         <div class="filter-controls">
           <h3>Filters & Search</h3>
@@ -274,6 +339,13 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
             
             <label>Location:</label>
             <input type="text" id="locationFilter" placeholder="Filter by location..." onkeyup="filterTable()">
+            
+            <label>Source:</label>
+            <select id="sourceFilter" onchange="filterTable()">
+              <option value="">All Sources</option>
+              <option value="linkedin">LinkedIn</option>
+              <option value="jobindex">JobIndex</option>
+            </select>
           </div>
           <div style="margin-top: 10px;">
             <label>Seniority:</label>
@@ -296,10 +368,11 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
             <button onclick="clearFilters()" style="margin-left: 20px; padding: 5px 10px;">Clear Filters</button>
           </div>
           <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
-            💡 Click column headers to sort • Use filters to narrow down results
+            💡 Click column headers to sort • Use filters to narrow down results • Jobs sorted by adjusted score (skill match × recency)
           </p>
         </div>
-          <table>
+        
+        <table>
           <thead>
             <tr>
               ${columnNames.filter(name => name !== 'url').map((name, index) => {
@@ -327,7 +400,12 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
 
   const port = Math.floor(Math.random() * 10000) + 5000; // Random port between 5000-15000
   server.listen(port, () => {
+    console.log(`🌐 Jobs report available at: http://localhost:${port}`);
     // Open browser on Windows
-    execSync(`start http://localhost:${port}`);
+    try {
+      execSync(`start http://localhost:${port}`);
+    } catch (error) {
+      console.log('Could not automatically open browser. Please visit the URL above manually.');
+    }
   });
 }

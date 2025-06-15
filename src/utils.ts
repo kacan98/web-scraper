@@ -105,9 +105,9 @@ export function logProgress(
 }
 
 export const getElapsedTime = (since: Date = processStarted) => {
-  const now = new Date(since);
+  const now = new Date();
 
-  const elapsedTime = now.getTime() - processStarted.getTime();
+  const elapsedTime = now.getTime() - since.getTime();
   const seconds = Math.floor((elapsedTime / 1000) % 60);
   const minutes = Math.floor((elapsedTime / (1000 * 60)) % 60);
   const hours = Math.floor((elapsedTime / (1000 * 60 * 60)) % 24);

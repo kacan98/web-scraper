@@ -2,10 +2,10 @@ import { DEV_MODE } from "envVars";
 import { actionPromise } from "index";
 import inquirer from "inquirer";
 import { analyzeLinkedInJobs } from "src/ai/ai-cmd";
-import { scrapeLinkedinJobs } from "src/linkedin/linkedin-scraping-cmd";
+import { scrapeJobsFromMultipleSources } from "src/jobs-scrapers/scrape-cmd";
+import { findMatchingJobsForKarel } from "src/jobs/findMatchingJobsForKarel";
+import { findRatedJobsForKarel } from "src/jobs/findRatedJobs";
 import { getElapsedTime } from "src/utils";
-import { findMatchingJobsForKarel } from "./jobs/findMatchingJobs";
-import { findRatedJobsForKarel } from "./jobs/findRatedJobs";
 
 
 export enum LinkedinOptions {
@@ -24,9 +24,9 @@ export const linkedinMenu = async () => {
         const result = await inquirer.prompt({
             type: "select",
             name: "action",
-            message: "What would you like to do?",
+            message: "What would you like to do with jobs?",
             choices: [
-                { name: 'Step 1) Scrape jobs from LinkedIn', value: LinkedinOptions.SCRAPE },
+                { name: 'Step 1) Scrape jobs from all sources (LinkedIn, JobIndex)', value: LinkedinOptions.SCRAPE },
                 { name: 'Step 2) Analyze scraped jobs with AI', value: LinkedinOptions.AI },
                 { name: 'Step 3A) Find jobs for Karel based on criteria', value: LinkedinOptions.FIND_MATCHING_JOBS },
                 { name: 'Step 3B) Find rated jobs for Karel based on criteria', value: LinkedinOptions.RATE_JOBS },
@@ -42,7 +42,7 @@ export const linkedinMenu = async () => {
             const timeStarted = new Date();
 
             try {
-                await scrapeLinkedinJobs();
+                await scrapeJobsFromMultipleSources();
             } catch (error) {
                 console.error('Error scraping LinkedIn jobs:', error);
             }

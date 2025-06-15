@@ -1,7 +1,6 @@
 import Bottleneck from "bottleneck";
-import { insertAIAnalysis } from "src/linkedin/jobs/ai-job-analysis.db";
-import { getJobById, getJobIds } from "src/linkedin/jobs/jobs.db";
-import { logProgress, removeNewLinesAndDoubleSpaces } from "src/utils";
+import { getJobById, getJobIds, insertAIAnalysis } from "src/jobs/generic/ai-job-analysis";
+import { logProgress } from "src/utils";
 import {
   extractJobInfoWithGemini
 } from "./gemini";
@@ -12,96 +11,94 @@ export enum AISource {
   OpenAi = 'openAi'
 }
 
-export const analyzeLinkedInJobs = async (onlyJobsWithoutAnalysis = true) => {
-  // For debugging
-  const maxJobs: number | undefined = undefined;
-  const jobIds = await getJobIds({ onlyWithoutAnalysis: onlyJobsWithoutAnalysis }).then(r => r.slice(0, maxJobs));
-  const jobsToAnalyze = jobIds.length;
+export const analyzeJobsWithAI = async (onlyJobsWithoutAnalysis = true) => {
+  console.log('🤖 Starting AI job analysis for all job sources...');
+  // Get total count of jobs to analyze
+  const totalJobs = await getJobIds({
+    onlyWithoutAnalysis: onlyJobsWithoutAnalysis,
+    onlyGetCount: true
+  }) as number;
 
-  if (jobsToAnalyze === 0) {
-    console.log('No jobs to process. Exiting...');
+  if (totalJobs === 0) {
+    console.log('✅ No jobs found that need AI analysis.');
     return;
   }
 
-  console.log('Total jobs to process:', jobsToAnalyze);
+  console.log(`📊 Found ${totalJobs} jobs to analyze`);
 
-  const model: keyof typeof geminiModels = "Gemini 2.0 Flash-Lite"
-  const modelProperties = geminiModels[model];
-  const limitPerMinute = modelProperties.requestsPerMinute;
-
-  // Configure rate limiter
-  const minTime = 60000 / limitPerMinute; // Time between requests in ms
-  const maxConcurrent = 5; // Adjust based on API concurrency limits if specified
-
-  const limiter = new Bottleneck({
-    minTime: minTime,
-    maxConcurrent: maxConcurrent
+  const model = geminiModels["Gemini 2.0 Flash-Lite"];
+  const bottleneckLimiter = new Bottleneck({
+    maxConcurrent: 3,
+    minTime: Math.floor(60000 / model.requestsPerMinute) // Convert requests per minute to milliseconds
   });
 
-  let completed = 0;
-  const total = jobIds.length;
+  let processedCount = 0;
+  let errorCount = 0;
+  const batchSize = 50;
 
-  // Process all jobs concurrently
-  const processJob = async (jobId: number) => {
-    try {
-      const job = await getJobById(jobId);
-      removeNewLinesAndDoubleSpaces(job);
+  for (let skip = 0; skip < totalJobs; skip += batchSize) {
+    const jobIds = await getJobIds({
+      skip,
+      top: batchSize,
+      onlyWithoutAnalysis: onlyJobsWithoutAnalysis,
+    }) as number[];
 
-      const jobInfo = await limiter.schedule(() => extractJobInfoWithGemini(job, modelProperties.apiName));
+    if (jobIds.length === 0) break;
 
-      // Validate mandatory fields
-      if (
-        jobInfo.isInternship === undefined
-      ) {
-        jobInfo.isInternship = false;
-      }
+    console.log(`\n🔄 Processing batch: jobs ${skip + 1}-${Math.min(skip + batchSize, totalJobs)} of ${totalJobs}`);
 
-      if (!jobInfo.jobSummary) {
-        console.log(jobInfo);
-        throw new Error('Job summary is empty');
-      }
+    // Process jobs in parallel with rate limiting
+    const promises = jobIds.map(jobId =>
+      bottleneckLimiter.schedule(async () => {
+        try {
+          const job = await getJobById(jobId);
 
-      if (!jobInfo.skillsRequired) {
-        console.log(jobInfo);
-        throw new Error('No required skills found');
-      }
+          if (!job) {
+            console.log(`⚠️  Job ${jobId} not found, skipping...`);
+            return;
+          }          // Extract job information using AI
+          const rawAnalysis = await extractJobInfoWithGemini(job, model.apiName);
+          // Convert null values to undefined and ensure proper types
+          const analysis = {
+            yearsOfExperienceExpected: rawAnalysis.yearsOfExperienceExpected ?? undefined,
+            numberOfApplicants: rawAnalysis.numberOfApplicants ?? undefined,
+            seniorityLevel: rawAnalysis.seniorityLevel ?? undefined,
+            developmentSide: rawAnalysis.developmentSide ?? undefined,
+            companyIndustry: rawAnalysis.companyIndustry ?? undefined,
+            workModel: rawAnalysis.workModel ?? undefined,
+            postLanguage: rawAnalysis.postLanguage || 'Unknown',
+            salary: rawAnalysis.salary ?? undefined,
+            postedDaysAgo: rawAnalysis.postedDaysAgo ?? undefined,
+            jobSummary: rawAnalysis.jobSummary || 'No summary available',
+            skillsRequired: rawAnalysis.skillsRequired || [],
+            skillsOptional: rawAnalysis.skillsOptional || [],
+            isInternship: rawAnalysis.isInternship || false,
+            city: rawAnalysis.city ?? undefined
+          };
 
-      if (!jobInfo.skillsOptional) {
-        jobInfo.skillsOptional = [];
-      }
+          // Insert the analysis into database
+          await insertAIAnalysis(jobId, analysis);
 
-      if (!jobInfo.postLanguage) {
-        jobInfo.postLanguage = 'English';
-      }
+          processedCount++;
 
-      const daysSinceScraped = Math.floor((Date.now() - job.dateScraped.getTime()) / (1000 * 60 * 60 * 24));
+          logProgress(processedCount, totalJobs, 1, 'jobs analyzed');
 
-      await insertAIAnalysis(job.id, {
-        // Required fields
-        postLanguage: jobInfo.postLanguage,
-        jobSummary: jobInfo.jobSummary,
-        skillsRequired: jobInfo.skillsRequired,
-        skillsOptional: jobInfo.skillsOptional,
-        isInternship: jobInfo.isInternship,
-        // Optional fields
-        yearsOfExperienceExpected: jobInfo.yearsOfExperienceExpected ?? undefined,
-        numberOfApplicants: jobInfo.numberOfApplicants ?? undefined,
-        seniorityLevel: jobInfo.seniorityLevel ?? undefined,
-        decelopmentSide: jobInfo.decelopmentSide ?? undefined,
-        companyIndustry: jobInfo.companyIndustry ?? undefined,
-        workModel: jobInfo.workModel ?? undefined,
-        salary: jobInfo.salary ?? undefined,
-        postedDaysAgo: jobInfo.postedDaysAgo ?? daysSinceScraped,
-        city: jobInfo.city ?? undefined
-      });
-    } catch (error) {
-      console.error(`Error processing job ${jobId}:`, error);
-    } finally {
-      completed++;
-      logProgress(completed, total, 1, 'jobs processed with AI');
-    }
-  };
+        } catch (error) {
+          errorCount++;
+          console.error(`❌ Error analyzing job ${jobId}:`, error);
+        }
+      })
+    );
 
-  await Promise.all(jobIds.map(processJob));
-  console.log('Done - All jobs have been processed.');
+    await Promise.all(promises);
+  }
+
+  console.log('\n🎉 AI job analysis completed!');
+  console.log(`✅ Successfully analyzed: ${processedCount} jobs`);
+  if (errorCount > 0) {
+    console.log(`❌ Errors encountered: ${errorCount} jobs`);
+  }
 };
+
+// Legacy function name for backwards compatibility
+export const analyzeLinkedInJobs = analyzeJobsWithAI;

@@ -2,8 +2,8 @@ import inquirer from "inquirer";
 import { Page } from "playwright";
 import { getElapsedTime, log, openPage } from "src/utils";
 import yargs from "yargs";
-import { scrapeJobsLinkedin } from "./jobs/scrape";
-import { createNewJobSearch } from "./jobs/jobs.db";
+import { createNewJobSearch } from "../jobs/generic/job-db";
+import { scrapeJobsLinkedin } from "../jobs/linkedin/scrape-linkedin";
 
 export const karelSearchWords = [
   'Angular',
@@ -83,9 +83,8 @@ export const scrapeLinkedinJobs = async () => {
   const searchTerms = searchTermsUnparsed.split(";");
 
   log(`I will search for "${searchTerms.join(', ')}" in ${location}`);
-
   for (let searchTerm of searchTerms) {
-    const searchId = await createNewJobSearch(searchTerm, location);
+    const searchId = await createNewJobSearch('linkedin', searchTerm, location, maxAge);
 
     let page: Page;
     page = await openPage();
