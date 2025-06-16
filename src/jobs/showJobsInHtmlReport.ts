@@ -12,7 +12,7 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
   // Add URL to each row based on the source
   const importantInfoRows: ImportantInfoRowWithUrl[] = _importantInfoRows.map((row) => {
     let url = '';
-    
+
     // Handle different sources
     if (row.originalUrl) {
       url = row.originalUrl;
@@ -24,14 +24,14 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
       // JobIndex URLs might be in originalUrl or we create a search URL
       url = row.originalUrl || `https://www.jobindex.dk/jobsoegning?q=${encodeURIComponent(row.title || '')}`;
     }
-    
+
     return {
       ...row,
       url
     };
   });
-  
-  if(importantInfoRows.length === 0) {
+
+  if (importantInfoRows.length === 0) {
     console.log('No jobs found')
     return
   }
@@ -45,7 +45,7 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
       } else {
         let content = value;
         let className = '';
-        
+
         if (key === 'title') {
           // Wrap the title in an <a></a>
           content = `<a href="${row.url}" target="_blank">${value}</a>`
@@ -59,9 +59,20 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
           content = typeof content === 'string' ? content.charAt(0).toUpperCase() + content.slice(1) : content;
         } else if (key === 'summary') {
           className = 'summary';
-          // Truncate summary if too long
+          // Create expandable summary if too long
           if (typeof content === 'string' && content.length > 200) {
-            content = content.substring(0, 200) + '...';
+            const shortSummary = content.substring(0, 200);
+            const fullSummary = content;
+            const summaryId = `summary-${Math.random().toString(36).substr(2, 9)}`;
+
+            content = `
+              <div class="summary-container">
+                <span id="${summaryId}-short">${shortSummary}...</span>
+                <span id="${summaryId}-full" style="display: none;">${fullSummary}</span>
+                <br>
+                <button class="summary-toggle" onclick="toggleSummary('${summaryId}')" id="${summaryId}-btn">Show more</button>
+              </div>
+            `;
           }
         } else if (key === 'requiredSkills' || key === 'optionalSkills') {
           className = 'skills';
@@ -77,13 +88,18 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
           } else if (!content) {
             content = 'N/A';
           }
-        } else if (key === 'posted') {
+        } else if (key === 'posted' || key === 'scraped') {
           // Format the date if it's a valid date
           if (content && content !== 'Unknown' && typeof content === 'string') {
             try {
               const date = new Date(content);
               if (!isNaN(date.getTime())) {
-                content = date.toLocaleDateString();
+                // Check if this is the Unix epoch (1970-01-01) which indicates missing data
+                if (date.getFullYear() === 1970 && date.getMonth() === 0 && date.getDate() === 1) {
+                  content = 'Unknown';
+                } else {
+                  content = date.toLocaleDateString();
+                }
               }
             } catch (e) {
               // Keep original content if date parsing fails
@@ -97,12 +113,10 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
           }
         } else if (key === 'scoringFormula') {
           className = 'formula';
-          // Make formula more readable
-          if (typeof content === 'string' && content.length > 100) {
-            content = content.substring(0, 100) + '...';
-          }
+          // Don't truncate the formula - let it display fully
+          // The CSS will handle wrapping if needed
         }
-        
+
         const classAttr = className ? ` class="${className}"` : '';
         return `<td${classAttr}>${content || 'N/A'}</td>`;
       }
@@ -172,6 +186,23 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
           a { color: #0066cc; text-decoration: none; }
           a:hover { text-decoration: underline; }
           .summary { max-width: 300px; font-size: 0.9em; }
+          .summary-container {
+            line-height: 1.4;
+          }
+          .summary-toggle {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            color: #1976d2;
+            padding: 2px 6px;
+            font-size: 0.75em;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-top: 4px;
+            transition: background-color 0.2s;
+          }
+          .summary-toggle:hover {
+            background: #bbdefb;
+          }
           .skills { font-size: 0.85em; color: #666; }
           .company { font-weight: bold; color: #333; }
           .location { color: #666; font-size: 0.9em; }
@@ -186,11 +217,14 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
             color: #27ae60;
             text-align: center;
             font-size: 1.1em;
-          }
-          .formula {
+          }          .formula {
             font-size: 0.8em;
             color: #7f8c8d;
             font-family: monospace;
+            max-width: 300px;
+            word-wrap: break-word;
+            white-space: normal;
+            line-height: 1.3;
           }
           .applicants {
             font-weight: bold;
@@ -214,10 +248,26 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
             margin-right: 10px;
             font-weight: bold;
           }
-        </style>
-        <script>
+        </style>        <script>
           let sortColumn = -1;
           let sortDirection = 'asc';
+
+          // Initialize table with default sort (by adjusted score descending if available)
+          document.addEventListener('DOMContentLoaded', function() {
+            const table = document.querySelector('table');
+            const headers = table.querySelectorAll('th');
+
+            // Look for "Adjusted Score" column and sort by it initially
+            for (let i = 0; i < headers.length; i++) {
+              const headerText = headers[i].textContent.toLowerCase();
+              if (headerText.includes('adjusted') && headerText.includes('score')) {
+                sortColumn = i;
+                sortDirection = 'desc'; // Start with highest scores first
+                sortTable(i);
+                break;
+              }
+            }
+          });
 
           function sortTable(columnIndex) {
             const table = document.querySelector('table');
@@ -241,26 +291,41 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
             
             // Add sort indicator to current column
             headers[columnIndex].classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
-            
-            // Sort rows
+              // Sort rows
             rows.sort((a, b) => {
               let aVal = a.cells[columnIndex].textContent.trim();
               let bVal = b.cells[columnIndex].textContent.trim();
               
-              // Handle numeric values (years of experience, dates, scores)
+              // Check if this looks like a date column by examining the header
+              const headers = table.querySelectorAll('th');
+              const columnHeader = headers[columnIndex]?.textContent.toLowerCase() || '';
+              const isDateColumn = columnHeader.includes('posted') || columnHeader.includes('date');
+
+              if (isDateColumn) {
+                // Handle date sorting specifically
+                // Convert "Unknown", "N/A", etc. to a very old date for sorting
+                const parseDate = (dateStr) => {
+                  if (!dateStr || dateStr === 'Unknown' || dateStr === 'N/A' || dateStr === '') {
+                    return new Date('1900-01-01'); // Very old date for sorting purposes
+                  }
+                  const date = new Date(dateStr);
+                  // If invalid date, also treat as very old
+                  return isNaN(date.getTime()) ? new Date('1900-01-01') : date;
+                };
+
+                const aDate = parseDate(aVal);
+                const bDate = parseDate(bVal);
+
+                return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
+              }
+
+              // Handle numeric values (years of experience, scores)
               const aNum = parseFloat(aVal);
               const bNum = parseFloat(bVal);
               if (!isNaN(aNum) && !isNaN(bNum)) {
                 return sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
               }
-              
-              // Handle dates
-              const aDate = new Date(aVal);
-              const bDate = new Date(bVal);
-              if (!isNaN(aDate.getTime()) && !isNaN(bDate.getTime())) {
-                return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
-              }
-              
+
               // Handle text (case insensitive)
               aVal = aVal.toLowerCase();
               bVal = bVal.toLowerCase();
@@ -312,9 +377,7 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
               
               rows[i].style.display = show ? '' : 'none';
             }
-          }
-
-          function clearFilters() {
+          }          function clearFilters() {
             document.getElementById('titleFilter').value = '';
             document.getElementById('companyFilter').value = '';
             document.getElementById('locationFilter').value = '';
@@ -322,6 +385,24 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
             document.getElementById('seniorityFilter').value = '';
             document.getElementById('workModelFilter').value = '';
             filterTable();
+          }
+
+          function toggleSummary(summaryId) {
+            const shortElement = document.getElementById(summaryId + '-short');
+            const fullElement = document.getElementById(summaryId + '-full');
+            const button = document.getElementById(summaryId + '-btn');
+
+            if (fullElement.style.display === 'none') {
+              // Show full summary
+              shortElement.style.display = 'none';
+              fullElement.style.display = 'inline';
+              button.textContent = 'Show less';
+            } else {
+              // Show short summary
+              shortElement.style.display = 'inline';
+              fullElement.style.display = 'none';
+              button.textContent = 'Show more';
+            }
           }
         </script>
       </head>
@@ -366,9 +447,9 @@ export function showImportantInfoRowsInBrowser(_importantInfoRows: ImportantInfo
             </select>
             
             <button onclick="clearFilters()" style="margin-left: 20px; padding: 5px 10px;">Clear Filters</button>
-          </div>
-          <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
-            💡 Click column headers to sort • Use filters to narrow down results • Jobs sorted by adjusted score (skill match × recency)
+          </div>          <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+            💡 Click column headers to sort • Use filters to narrow down results • Jobs sorted by adjusted score (skill match × recency)<br>
+            📊 Scoring: Skills matched get points, multiplied by time decay (1.0 for ≤1d, 0.9 for 2d, 0.8 for 3d, etc.). Jobs with unknown posting dates get a 0.3 multiplier.
           </p>
         </div>
         

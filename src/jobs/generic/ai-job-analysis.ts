@@ -202,7 +202,11 @@ const getDatePosted = (
       //can be decimal, e.g. 0.5 days ago
       postedDaysAgo?: number
     }): Date => {
-  if (postedDaysAgo === undefined) return new Date('1970-01-01');
+  if (postedDaysAgo === undefined) {
+    // If we don't know when the job was posted, use the scraped date as a fallback
+    // This is more reasonable than using 1970-01-01
+    return jobScrapedDate;
+  }
 
   const datePosted = new Date(jobScrapedDate);
   //set with hours to make sure we take decimal days into account

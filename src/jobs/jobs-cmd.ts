@@ -10,8 +10,8 @@ import { scrapeJobsFromMultipleSources } from "./scrape-cmd";
 export enum JobsOptions {
     SCRAPE = 'Scrape_jobs',
     AI_ANALYZE = 'AI_analyze',
-    FIND_RATED = 'Find_rated',
-    FIND_MATCHING = 'Find_matching',
+    FIND_RATED = 'Find_rated_for_Karel',
+    FIND_FILTERED = 'Find_filtered_for_Karel',
     EXIT = "Exit"
 }
 
@@ -26,8 +26,8 @@ export const jobsMenu = async () => {
             message: "What would you like to do with jobs?", choices: [
                 { name: 'Scrape jobs from all sources (LinkedIn, JobIndex)', value: JobsOptions.SCRAPE },
                 { name: 'Analyze jobs with AI (all sources)', value: JobsOptions.AI_ANALYZE },
-                { name: 'Find rated jobs (show best matches)', value: JobsOptions.FIND_RATED },
-                { name: 'Find matching jobs for Karel (custom filters)', value: JobsOptions.FIND_MATCHING },
+                { name: 'Find rated jobs for Karel', value: JobsOptions.FIND_RATED },
+                { name: 'Find filtered jobs for Karel', value: JobsOptions.FIND_FILTERED },
                 { name: "Exit", value: JobsOptions.EXIT },
             ],
         });
@@ -78,14 +78,13 @@ export const jobsMenu = async () => {
                 console.log(`Find rated jobs completed in ${getElapsedTime(ratedTimeStarted)}`);
             } break;
 
-        case JobsOptions.FIND_MATCHING:
+        case JobsOptions.FIND_FILTERED:
             const matchingTimeStarted = new Date();
 
             try {
-                console.log("🎯 Finding matching jobs for Karel...");
                 await findMatchingJobsForKarel();
             } catch (error) {
-                console.error('Error finding matching jobs for Karel:', error);
+                console.error('Error finding matching jobs:', error);
             }
 
             if (DEV_MODE) {
