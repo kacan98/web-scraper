@@ -19,10 +19,11 @@ export const jobsMenu = async () => {
     const actionResult = await actionPromise;
     let action: JobsOptions = actionResult?.action as JobsOptions;
 
-    if (!action) {        const result = await inquirer.prompt({
+    if (!action) {
+        const result = await inquirer.prompt({
             type: "select",
             name: "action",
-            message: "What would you like to do with jobs?",            choices: [
+            message: "What would you like to do with jobs?", choices: [
                 { name: 'Scrape jobs from all sources (LinkedIn, JobIndex)', value: JobsOptions.SCRAPE },
                 { name: 'Analyze jobs with AI (all sources)', value: JobsOptions.AI_ANALYZE },
                 { name: 'Find rated jobs (show best matches)', value: JobsOptions.FIND_RATED },
@@ -32,7 +33,7 @@ export const jobsMenu = async () => {
         });
 
         action = result.action;
-    }    switch (action) {
+    } switch (action) {
         case JobsOptions.SCRAPE:
             const timeStarted = new Date();
 
@@ -44,7 +45,10 @@ export const jobsMenu = async () => {
 
             if (DEV_MODE) {
                 console.log(`Scraping completed in ${getElapsedTime(timeStarted)}`);
-            }            break;
+                await analyzeJobsWithAI();
+                await findRatedJobsForKarel();
+            }
+            break;
 
         case JobsOptions.AI_ANALYZE:
             const aiTimeStarted = new Date();
@@ -72,7 +76,7 @@ export const jobsMenu = async () => {
 
             if (DEV_MODE) {
                 console.log(`Find rated jobs completed in ${getElapsedTime(ratedTimeStarted)}`);
-            }            break;
+            } break;
 
         case JobsOptions.FIND_MATCHING:
             const matchingTimeStarted = new Date();

@@ -71,17 +71,7 @@ export const scrapeJobsLinkedin = async (
   }  console.log('🔍 Checking login status...');
   console.log('🔍 Current page URL:', page.url());
   console.log('🔍 Page title:', await page.title());
-  
-  // Take a screenshot for debugging if in dev mode
-  if (DEV_MODE) {
-    try {
-      await page.screenshot({ path: 'linkedin-debug.png', fullPage: false });
-      console.log('🔍 Debug screenshot saved as linkedin-debug.png');
-    } catch (error) {
-      console.log('🔍 Could not take screenshot:', error);
-    }
-  }
-  
+
   // Check if we are logged in by searching for "Sign in" or "Continue with Google"
   let signInButton;
   try {
