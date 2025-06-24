@@ -2,14 +2,7 @@ import inquirer from "inquirer";
 import { Page } from "playwright";
 import { getElapsedTime, log, openPage } from "src/utils";
 import yargs from "yargs";
-import { JobSource, scrapeJobs } from "./scrape-orchestrator";
-
-export const karelSearchWords = [
-  'Angular',
-  'TypeScript',
-  'JavaScript',
-  'Web Developer'
-];
+import { JobSource, scrapeJobsAllSources } from "./scrape-orchestrator";
 
 const options = {
   searchTerms: {
@@ -100,7 +93,7 @@ export const scrapeJobsFromMultipleSources = async () => {
     page = await openPage();
 
     try {
-      const results = await scrapeJobs(page, {
+      const results = await scrapeJobsAllSources(page, {
         jobDescription: searchTerm,
         location,
         shouldLogin,
@@ -163,7 +156,4 @@ export const scrapeJobsFromMultipleSources = async () => {
   return allResults;
 };
 
-// Legacy function for backward compatibility
-export const scrapeLinkedinJobs = async () => {
-  return scrapeJobsFromMultipleSources();
-};
+

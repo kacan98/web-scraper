@@ -4,8 +4,8 @@ import { Page } from "playwright-core";
 import {
   extractText,
   findFunctioningSelector,
-  tryToFindElementFromSelectors,
   tryToFindElementsFromSelectors,
+  waitForAtLeastOneSelector
 } from "src/searchForElements";
 import { sleepApprox } from "src/utils";
 import { saveJobsBatch } from "../generic/job-db";
@@ -89,15 +89,6 @@ export const scrapeJobsJobIndex = async (
   }
 
   log("Done. Found ", totalCardsFound, " cards and ", totalNewJobsFound, " new jobs.");
-};
-
-const waitForAtLeastOneSelector = async (page: Page, selectors: string[]) => {
-  const elements = await tryToFindElementFromSelectors(page, selectors);
-  if (!elements) {
-    throw new Error("No elements found");
-  }
-
-  await elements.waitFor({ state: "visible" });
 };
 
 const endOfPageError = new Error('We likely got to the end of the page.');

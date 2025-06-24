@@ -20,7 +20,7 @@ const pool = new Pool({
     max: 3, // Limit to 3 concurrent connections max
     min: 1, // Keep at least 1 connection open
     idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
-    connectionTimeoutMillis: 10000, // Timeout connections after 10 seconds
+    connectionTimeoutMillis: 60000, // Timeout connections after 60 seconds
 });
 
 export const db = drizzle(pool);

@@ -19,6 +19,15 @@ export const tryToFindElementFromSelectors = async (
   return null;
 };
 
+export const waitForAtLeastOneSelector = async (page: Page, selectors: string[]) => {
+  const elements = await tryToFindElementFromSelectors(page, selectors);
+  if (!elements) {
+    throw new Error("No elements found");
+  }
+
+  await elements.waitFor({ state: "visible" });
+};
+
 // Overload signatures
 export async function tryToFindElementsFromSelectors<
   T extends Record<string, string[]>

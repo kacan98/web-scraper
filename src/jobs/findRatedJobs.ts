@@ -16,7 +16,8 @@ export const karelSkillMap: Record<string, number> = {
   "C#": 5,
   ".NET": 6,
   'x++': 8,
-  'PHP': -10
+  'PHP': -50,
+  "Java": -50
 }
 
 // Helper function to format skills with ratings, sorted by rating
@@ -56,13 +57,11 @@ const getSkillRating = (skill: string, skillMap: Record<string, number>): number
     // Check if the job skill contains our mapped skill (e.g., "ReactJS" contains "React")
     if (skillLower.includes(mapSkillLower) || mapSkillLower.includes(skillLower)) {
       return rating;
-    }
-
-    // Special handling for common variations
+    }    // Special handling for common variations
     if ((mapSkillLower === 'react' && (skillLower.includes('reactjs') || skillLower.includes('react.js'))) ||
       (mapSkillLower === 'angular' && skillLower.includes('angularjs')) ||
-      (mapSkillLower === 'javascript' && (skillLower.includes('js') || skillLower === 'js')) ||
-      (mapSkillLower === 'typescript' && (skillLower.includes('ts') || skillLower === 'ts'))) {
+      (mapSkillLower === 'javascript' && (skillLower === 'js' || skillLower === 'javascript')) ||
+      (mapSkillLower === 'typescript' && (skillLower === 'ts' || skillLower === 'typescript'))) {
       return rating;
     }
   }
@@ -122,9 +121,8 @@ export const findRatedJobsForKarel = async () => {
     console.log("  2. Run AI analysis on the jobs");
     console.log("  3. Have skills that match the available jobs");
     return;
-  }
+  } console.log(`📊 Found ${jobs.length} matching jobs. Processing...`);
 
-  console.log(`📊 Found ${jobs.length} matching jobs. Processing...`);
 
   // Create enhanced info rows for display with cleaner, more relevant data
   const importantInfoRows = await Promise.all(jobs.map(async (j) => {
@@ -138,7 +136,7 @@ export const findRatedJobsForKarel = async () => {
           eq(skillJobMappingTable.jobId, j.id),
           eq(skillJobMappingTable.isRequired, false)
         )
-    );    // Calculate time decay and adjusted score
+    );
     const timeDecay = calculateTimeDecay(j.jobPosted);
     const adjustedScore = j.rating * timeDecay;
 
@@ -153,17 +151,9 @@ export const findRatedJobsForKarel = async () => {
       } else {
         daysAgo = Math.floor((new Date().getTime() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
       }
-    }    // Get matching skills for formula using the improved matching
-    const matchingSkills = j.requiredSkills.filter(skill => getSkillRating(skill, karelSkillMap) > 0);
-    const matchingSkillsWithRatings = matchingSkills.map(skill => `${skill}(${getSkillRating(skill, karelSkillMap)})`);
+    }
 
-    const scoringFormula = generateScoringFormula(
-      j.rating,
-      timeDecay,
-      adjustedScore,
-      daysAgo,
-      matchingSkillsWithRatings
-    ); return {
+    return {
       title: j.title,
       company: j.company,
       location: j.location?.split('·')[0]?.trim() || j.location, // Clean location
@@ -179,29 +169,15 @@ export const findRatedJobsForKarel = async () => {
       scraped: j.dateScraped ? j.dateScraped.toLocaleDateString() : 'Unknown', // Add scraped date
       numberOfApplicants: j.numberOfApplicants,
       baseRating: j.rating,
-      adjustedScore: Math.round(adjustedScore * 10) / 10, // Round to 1 decimal
-      scoringFormula: scoringFormula,
+      adjustedScore: Math.round(adjustedScore * 10) / 10, // Round to 1 decimal      scoringFormula: scoringFormula,
       externalId: j.externalId,
       originalUrl: j.originalUrl,
     };
   }));
 
-  // Sort by adjusted score (descending)  importantInfoRows.sort((a, b) => b.adjustedScore - a.adjustedScore);
+  // Sort by adjusted score (descending)
+  importantInfoRows.sort((a, b) => b.adjustedScore - a.adjustedScore);
 
-  // Display summary in console
-  console.log(`\n📋 Top rated jobs:`);
-  importantInfoRows.slice(0, 5).forEach((job, index) => {
-    console.log(`\n${index + 1}. ${job.title} at ${job.company}`);
-    console.log(`   Source: ${job.source} | Location: ${job.location}`);
-    console.log(`   Score: ${job.adjustedScore.toFixed(2)} | Posted: ${job.posted}`);
-    console.log(`   Formula: ${job.scoringFormula}`);
-    if (job.requiredSkills && job.requiredSkills !== 'Not specified') {
-      console.log(`   Required Skills: ${job.requiredSkills}`);
-    }
-    if (job.summary && job.summary !== 'No summary available') {
-      console.log(`   Summary: ${job.summary.substring(0, 100)}...`);
-    }
-  });
   console.log(`✅ Processed ${importantInfoRows.length} jobs. Opening in browser...`);
   showImportantInfoRowsInBrowser(importantInfoRows);
 
@@ -355,10 +331,14 @@ export async function getRatedJobIdsImproved(mySkills: Record<string, number>) {
       and(
         eq(skillJobMappingTable.jobId, jobPostsTable.id),
         eq(skillJobMappingTable.isRequired, true)
-      )
-    )
+      ))
     .leftJoin(skillTable, eq(skillTable.id, skillJobMappingTable.skillId))
-    .where(sql`${jobAiAnalysisTable.jobId} IS NOT NULL`) // Only jobs with AI analysis
+    .where(
+      and(
+        sql`${jobAiAnalysisTable.jobId} IS NOT NULL`, // Only jobs with AI analysis
+        sql`${jobAiAnalysisTable.jobPosted} > NOW() - INTERVAL '2 weeks'` // Only jobs posted within 2 weeks
+      )
+  )
     .groupBy(
       jobPostsTable.id,
       jobPostsTable.externalId,
@@ -376,8 +356,7 @@ export async function getRatedJobIdsImproved(mySkills: Record<string, number>) {
       jobAiAnalysisTable.workModel,
       jobAiAnalysisTable.jobSummary,
       jobAiAnalysisTable.numberOfApplicants
-    );
-
+  );
   const allJobs = await query;
 
   // Filter and score jobs based on skill matching using our improved matching logic
@@ -389,7 +368,7 @@ export async function getRatedJobIdsImproved(mySkills: Record<string, number>) {
 
       for (const skill of job.requiredSkills) {
         const skillRating = getSkillRating(skill, mySkills);
-        if (skillRating > 0) {
+        if (skillRating !== 0) { // Include both positive and negative ratings
           rating += skillRating;
           matchingSkills.push(skill);
         }
@@ -401,7 +380,7 @@ export async function getRatedJobIdsImproved(mySkills: Record<string, number>) {
         matchingSkills
       };
     })
-    .filter(job => job.rating > 0) // Only include jobs that match our skills
+    .filter(job => job.matchingSkills.length > 0) // Only include jobs that have skills we know about (positive or negative)
     .sort((a, b) => {
       // Sort by rating first, then by posting date
       if (b.rating !== a.rating) {

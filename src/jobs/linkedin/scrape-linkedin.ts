@@ -1,14 +1,13 @@
 import { log } from "console";
 import { JobPost } from "db/schema/generic/job-schema";
-import { DEV_MODE } from "envVars";
 import { ScrapingSource } from "model";
 import { Page } from "playwright-core";
 import { getCookies } from "src/login";
 import {
   extractText,
   findFunctioningSelector,
-  tryToFindElementFromSelectors,
   tryToFindElementsFromSelectors,
+  waitForAtLeastOneSelector
 } from "src/searchForElements";
 import { sleepApprox } from "src/utils";
 import { markJobAsInSearch, saveJobInDb } from "../generic/job-db";
@@ -68,7 +67,8 @@ export const scrapeJobsLinkedin = async (
     } catch (error) {
       console.log('🔍 No dismiss button found or timed out');
     }
-  }  console.log('🔍 Checking login status...');
+  }
+  console.log('🔍 Checking login status...');
   console.log('🔍 Current page URL:', page.url());
   console.log('🔍 Page title:', await page.title());
 
@@ -146,15 +146,6 @@ export const scrapeJobsLinkedin = async (
   }
 
   log("Done. Found ", totalCardsFound, " cards and ", totalNewJobsFound, " new jobs.");
-};
-
-const waitForAtLeastOneSelector = async (page: Page, selectors: string[]) => {
-  const elements = await tryToFindElementFromSelectors(page, selectors);
-  if (!elements) {
-    throw new Error("No elements found");
-  }
-
-  await elements.waitFor({ state: "visible" });
 };
 
 const endOfPageError = new Error('We likely got to the end of the page.');

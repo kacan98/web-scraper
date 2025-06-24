@@ -14,7 +14,7 @@ export interface ScrapeJobsParams {
   sources?: JobSource[];
 }
 
-export const scrapeJobs = async (initialPage: Page, params: ScrapeJobsParams) => {
+export const scrapeJobsAllSources = async (initialPage: Page, params: ScrapeJobsParams) => {
   const {
     jobDescription,
     location,
@@ -105,12 +105,4 @@ export const scrapeJobs = async (initialPage: Page, params: ScrapeJobsParams) =>
   return results;
 };
 
-// Convenience functions for individual sources
-export const scrapeLinkedInJobs = (page: Page, params: Omit<ScrapeJobsParams, 'sources'>) =>
-  scrapeJobs(page, { ...params, sources: ['linkedin'] });
 
-export const scrapeJobIndexJobs = (page: Page, params: Omit<ScrapeJobsParams, 'sources'>) =>
-  scrapeJobs(page, { ...params, sources: ['jobindex'] });
-
-export const scrapeAllSources = (page: Page, params: Omit<ScrapeJobsParams, 'sources'>) =>
-  scrapeJobs(page, { ...params, sources: ['linkedin', 'jobindex'] });
