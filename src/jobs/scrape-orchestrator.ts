@@ -53,22 +53,46 @@ export const scrapeJobsAllSources = async (initialPage: Page, params: ScrapeJobs
 
       switch (source) {
         case 'linkedin':
-          await scrapeJobsLinkedin(page, {
-            jobDescription,
-            location,
-            searchId,
-            shouldLogin,
-            postsMaxAgeSeconds
-          });
+          try {
+            await scrapeJobsLinkedin(page, {
+              jobDescription,
+              location,
+              searchId,
+              shouldLogin,
+              postsMaxAgeSeconds
+            });
+          } catch (error) {
+            if (error instanceof Error && (
+              error.message.includes('closed') ||
+              error.message.includes('Target page, context or browser has been closed') ||
+              error.message.includes('Browser has been closed')
+            )) {
+              console.log(`⚠️ Browser was closed during ${source} scraping, but continuing with next source...`);
+            } else {
+              throw error; // Re-throw other errors
+            }
+          }
           break;
         
         case 'jobindex':
-          await scrapeJobsJobIndex(page, {
-            jobDescription,
-            location,
-            searchId,
-            postsMaxAgeSeconds
-          });
+          try {
+            await scrapeJobsJobIndex(page, {
+              jobDescription,
+              location,
+              searchId,
+              postsMaxAgeSeconds
+            });
+          } catch (error) {
+            if (error instanceof Error && (
+              error.message.includes('closed') ||
+              error.message.includes('Target page, context or browser has been closed') ||
+              error.message.includes('Browser has been closed')
+            )) {
+              console.log(`⚠️ Browser was closed during ${source} scraping, but continuing with next source...`);
+            } else {
+              throw error; // Re-throw other errors
+            }
+          }
           break;
         
         default:

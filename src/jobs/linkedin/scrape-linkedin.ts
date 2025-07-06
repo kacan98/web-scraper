@@ -120,28 +120,43 @@ export const scrapeJobsLinkedin = async (
 
   let morePagesExist = true;
   while (morePagesExist) {
-    const { cardsFound, newJobsFound } = await scrapeAllJobsOnPage(
-      page,
-      jobCardsSelector,
-      searchId,
-      totalNewJobsFound
-    );
-    totalCardsFound += cardsFound;
-    totalNewJobsFound += newJobsFound;
-    log(
-      `Found ${cardsFound} cards on this page. In total ${totalCardsFound} found so far out of which ${totalNewJobsFound} are new.`
-    );
+    try {
+      // Check if browser/page is still available before processing page
+      if (page.isClosed()) {
+        log("⚠️ Page has been closed, stopping scraping");
+        break;
+      }
 
-    const nextPage = await findNextPageAndNavigateToItIfItExists(
-      page,
-      currentPage
-    );
-    if (nextPage) {
-      log("Going to page", nextPage);
-      currentPage = nextPage;
-    } else {
-      log("No more pages found.");
-      morePagesExist = false;
+      const { cardsFound, newJobsFound } = await scrapeAllJobsOnPage(
+        page,
+        jobCardsSelector,
+        searchId,
+        totalNewJobsFound
+      );
+      totalCardsFound += cardsFound;
+      totalNewJobsFound += newJobsFound;
+      log(
+        `Found ${cardsFound} cards on this page. In total ${totalCardsFound} found so far out of which ${totalNewJobsFound} are new.`
+      );
+
+      const nextPage = await findNextPageAndNavigateToItIfItExists(
+        page,
+        currentPage
+      );
+      if (nextPage) {
+        log("Going to page", nextPage);
+        currentPage = nextPage;
+      } else {
+        log("No more pages found.");
+        morePagesExist = false;
+      }
+    } catch (error) {
+      if (page.isClosed()) {
+        log("⚠️ Page closed during page processing, stopping scraping");
+        break;
+      }
+      // Re-throw other errors
+      throw error;
     }
   }
 
@@ -166,19 +181,24 @@ const scrapeAllJobsOnPage = async (
     try {
       if (cardsFoundOnCurrentPage > 0) {
         // we have to scroll to the next card sometimes
-        const previousCard = page
-          .locator(cardSelector)
-          .nth(cardsFoundOnCurrentPage - 1);
-        previousCard.hover();
-        await page.mouse.wheel(0, 250);
+        try {
+          const previousCard = page
+            .locator(cardSelector)
+            .nth(cardsFoundOnCurrentPage - 1);
+          await previousCard.hover({ timeout: 5000 });
+          await page.mouse.wheel(0, 250);
+        } catch (error) {
+          log("⚠️ Error scrolling to previous card, continuing anyway");
+        }
       }
+
       const nextCard = page.locator(cardSelector).nth(cardsFoundOnCurrentPage);
 
       cardsFoundOnCurrentPage++;
 
       try {
         await nextCard.click({ timeout: 15000 });
-      } catch {
+      } catch (clickError) {
         if (cardsFoundOnCurrentPage > 1) {
           throw endOfPageError;
         } else {

@@ -7,7 +7,7 @@ import {
   JobSource,
   jobSourcesTable
 } from "db/schema/generic/job-schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 
 // Job Sources management
 export const getOrCreateJobSource = async (name: string, baseUrl: string, description?: string): Promise<JobSource> => {
@@ -190,6 +190,59 @@ export const createNewJobSearch = async (
     .execute();
 
   return result[0].id;
+};
+
+/**
+ * Calculate the optimal search timeframe based on the last search in the database.
+ * If the last search was less than 24 hours ago, default to 24 hours.
+ * Otherwise, search for jobs posted since the last search.
+ * @returns The number of seconds to search back from now
+ */
+export const calculateDynamicSearchTimeframe = async (): Promise<number> => {
+  const DEFAULT_24_HOURS = 86400; // 24 hours in seconds
+  
+  try {
+    // Get the most recent search across all sources
+    const lastSearch = await db
+      .select({
+        searchDate: jobSearchTable.searchDate,
+      })
+      .from(jobSearchTable)
+      .orderBy(desc(jobSearchTable.searchDate))
+      .limit(1)
+      .execute();
+
+    if (!lastSearch || lastSearch.length === 0) {
+      console.log('🔍 No previous searches found, defaulting to 24 hours');
+      return DEFAULT_24_HOURS;
+    }
+
+    const lastSearchDate = new Date(lastSearch[0].searchDate);
+    const now = new Date();
+    const timeDifferenceMs = now.getTime() - lastSearchDate.getTime();
+    const timeDifferenceSeconds = Math.floor(timeDifferenceMs / 1000);
+    const timeDifferenceMinutes = Math.floor(timeDifferenceSeconds / 60);
+
+    console.log(`⏰ Last search was ${timeDifferenceMinutes} minutes ago (${new Date(lastSearchDate).toLocaleString()})`);
+
+    // If less than 24 hours ago, default to 24 hours
+    if (timeDifferenceSeconds < DEFAULT_24_HOURS) {
+      console.log('🔍 Last search was less than 24 hours ago, defaulting to 24 hours search timeframe');
+      return DEFAULT_24_HOURS;
+    }
+
+    // Otherwise, search since the last search (with a small buffer to avoid missing jobs)
+    const bufferMinutes = 5; // 5 minute buffer to ensure we don't miss anything
+    const searchTimeframeSeconds = timeDifferenceSeconds + (bufferMinutes * 60);
+    
+    console.log(`🔍 Using dynamic timeframe: ${Math.floor(searchTimeframeSeconds / 60)} minutes (${Math.floor(searchTimeframeSeconds / 3600)} hours)`);
+    
+    return searchTimeframeSeconds;
+  } catch (error) {
+    console.error('Error calculating dynamic search timeframe:', error);
+    console.log('🔍 Falling back to default 24 hours');
+    return DEFAULT_24_HOURS;
+  }
 };
 
 export const markJobAsInSearch = async (jobId: number, jobSearchId: number) => {

@@ -2,6 +2,7 @@ import inquirer from "inquirer";
 import { Page } from "playwright";
 import { getElapsedTime, log, openPage } from "src/utils";
 import yargs from "yargs";
+import { calculateDynamicSearchTimeframe } from "./generic/job-db";
 import { JobSource, scrapeJobsAllSources } from "./scrape-orchestrator";
 
 const options = {
@@ -82,7 +83,11 @@ export const scrapeJobsFromMultipleSources = async () => {
   // Always use all available sources
   const sources: JobSource[] = ['linkedin', 'jobindex'];
 
+  // Calculate dynamic search timeframe if maxAge is not provided
+  const dynamicMaxAge = maxAge || await calculateDynamicSearchTimeframe();
+
   log(`I will search for "${searchTerms.join(', ')}" in ${location} using sources: ${sources.join(', ')}`);
+  log(`🔍 Search timeframe: ${Math.floor(dynamicMaxAge / 60)} minutes (${Math.floor(dynamicMaxAge / 3600)} hours)`);
 
   const allResults: Record<string, any> = {};
 
@@ -97,7 +102,7 @@ export const scrapeJobsFromMultipleSources = async () => {
         jobDescription: searchTerm,
         location,
         shouldLogin,
-        postsMaxAgeSeconds: maxAge,
+        postsMaxAgeSeconds: dynamicMaxAge,
         sources
       });
 

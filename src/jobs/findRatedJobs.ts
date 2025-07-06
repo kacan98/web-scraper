@@ -1,24 +1,50 @@
 import { db } from "db";
 import { jobAiAnalysisTable, jobPostsTable, jobSourcesTable, skillJobMappingTable, skillTable } from "db/schema/generic/job-schema";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, or, sql } from "drizzle-orm";
 import { showImportantInfoRowsInBrowser } from "./showJobsInHtmlReport";
 
 export const karelSkillMap: Record<string, number> = {
-  "TypeScript": 10,
-  "Angular": 20,
+  "Angular": 30,
+  "TypeScript": 30,
+  "Drizzle": 15,
+  "Figma": 10,
+  "SQL": 10,
+  "API": 10,
+  "git": 10,
   "Node.js": 10,
   "JavaScript": 10,
-  "Postgres": 8,
+  "Postgres": 10,
   "Playwright": 10,
-  "Drizzle": 15,
-  "Drizzle ORM": 15,
-  "React": 7,
-  "C#": 5,
-  ".NET": 6,
-  'x++': 8,
-  'PHP': -50,
-  "Java": -50
+  "Jest": 10,
+  "React": 10,
+  "C#": 10,
+  ".NET": 10,
+  'x++': 10,
+  "Tailwind": 10,
+  "Docker": 5,
+  "HTML": 5,
+  "CSS": 5,
+  "GraphQL": 5,
+  "Kubernetes": 5,
+  "GitHub Actions": 5,
+  "Github": 5,
+  "NoSQL": 5,
+
+  // Others
+  "Scrum": 10,
+  "Agile": 10,
+  "Swedish": 10,
+  "English": 10,
+  "Danish": 10,
+
+  // Negative skills (penalties)
+  "Swift": -10,
+  'PHP': -10,
+  "Python": -10,
+  "Java": -10,
 }
+
+const dateKarelStartedProgramming = new Date('2021-06-01'); // Karel started programming in June 2021
 
 // Helper function to format skills with ratings, sorted by rating
 const formatSkillsWithRatings = (skills: string[], skillMap: Record<string, number>): string => {
@@ -31,7 +57,7 @@ const formatSkillsWithRatings = (skills: string[], skillMap: Record<string, numb
       return {
         skill,
         rating: rating,
-        display: rating > 0 ? `${skill} (${rating})` : `${skill} (0)`
+        display: `${skill} (${rating})`
       };
     })
     .sort((a, b) => b.rating - a.rating); // Sort by rating descending
@@ -43,30 +69,84 @@ const formatSkillsWithRatings = (skills: string[], skillMap: Record<string, numb
 const getSkillRating = (skill: string, skillMap: Record<string, number>): number => {
   const skillLower = skill.toLowerCase();
 
-  // First try exact match (case insensitive)
+  // First try exact match (case insensitive) - this takes highest priority
   for (const [mapSkill, rating] of Object.entries(skillMap)) {
     if (mapSkill.toLowerCase() === skillLower) {
       return rating;
     }
   }
 
-  // Then try partial matching - check if skill contains any of our map skills or vice versa
+  // Check for exact matches with common variations (high priority)
   for (const [mapSkill, rating] of Object.entries(skillMap)) {
     const mapSkillLower = mapSkill.toLowerCase();
 
-    // Check if the job skill contains our mapped skill (e.g., "ReactJS" contains "React")
-    if (skillLower.includes(mapSkillLower) || mapSkillLower.includes(skillLower)) {
-      return rating;
-    }    // Special handling for common variations
-    if ((mapSkillLower === 'react' && (skillLower.includes('reactjs') || skillLower.includes('react.js'))) ||
-      (mapSkillLower === 'angular' && skillLower.includes('angularjs')) ||
-      (mapSkillLower === 'javascript' && (skillLower === 'js' || skillLower === 'javascript')) ||
-      (mapSkillLower === 'typescript' && (skillLower === 'ts' || skillLower === 'typescript'))) {
+    if ((mapSkillLower === 'react' && (skillLower === 'reactjs' || skillLower === 'react.js')) ||
+      (mapSkillLower === 'angular' && skillLower === 'angularjs') ||
+      (mapSkillLower === 'javascript' && skillLower === 'js') ||
+      (mapSkillLower === 'typescript' && skillLower === 'ts')) {
       return rating;
     }
   }
 
-  return 0; // No match found
+  // Then try partial matching - check if job skill contains our mapped skill
+  const partialMatches = [];
+
+  for (const [mapSkill, rating] of Object.entries(skillMap)) {
+    const mapSkillLower = mapSkill.toLowerCase();
+
+    // Check if the job skill contains our mapped skill (e.g., "SQL Server" contains "SQL")
+    // Only match if our mapped skill is at least 3 characters to avoid very short false matches
+    if (mapSkillLower.length >= 3 && skillLower.includes(mapSkillLower)) {
+      partialMatches.push({ skill: mapSkill, rating, matchLength: mapSkillLower.length });
+    }
+  }
+
+  // If we found partial matches, return the one with the longest match (most specific)
+  if (partialMatches.length > 0) {
+    const bestMatch = partialMatches.sort((a, b) => b.matchLength - a.matchLength)[0];
+    return bestMatch.rating;
+  }
+
+  return -5; // Penalty for skills not in your skill map
+};
+
+// Helper function to get work model bonus points based on AI-analyzed work model from database
+const getWorkModelBonus = (workModel: string | null): number => {
+  if (!workModel) return 0;
+
+  // Use the exact AI-analyzed work model enum values from the database
+  // These come from the AI analysis that categorizes jobs into: "remote", "on-site", "hybrid", "other", "unknown"
+  switch (workModel.toLowerCase()) {
+    case 'hybrid':
+      return 30; // Highest bonus for hybrid positions
+    case 'on-site':
+      return 25; // Good bonus for on-site positions
+    default:
+      return 0;
+  }
+};
+
+// Helper function to calculate years of experience penalty
+const getYearsExperiencePenalty = (requiredYears: number | null): number => {
+  // Calculate Karel's current experience dynamically based on start date
+  const now = new Date();
+  const yearsOfExperience = (now.getTime() - dateKarelStartedProgramming.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+  const myExperience = Math.floor(yearsOfExperience); // Round down to whole years
+
+  if (!requiredYears || requiredYears <= myExperience) {
+    return 0; // No penalty for jobs within experience level
+  }
+
+  const yearsGap = requiredYears - myExperience;
+
+  // Progressive penalty system - more realistic job applications
+  if (yearsGap === 1) return -5;   // 1 year over: small penalty
+  if (yearsGap === 2) return -12;  // 2 years over: moderate penalty
+  if (yearsGap === 3) return -20;  // 3 years over: significant penalty
+  if (yearsGap === 4) return -30;  // 4 years over: large penalty
+  if (yearsGap >= 5) return -45;   // 5+ years over: very large penalty (quite unrealistic to apply)
+
+  return 0;
 };
 
 // Helper function to calculate time decay factor
@@ -95,25 +175,45 @@ const calculateTimeDecay = (jobPosted: string | null): number => {
 };
 
 // Helper function to generate scoring formula description
-const generateScoringFormula = (
-  baseRating: number,
+const generateScoringFormulaString = (
+  skillsRating: number,
+  workModelBonus: number,
+  optionalSkillsRating: number,
+  experiencePenalty: number,
   timeDecay: number,
   finalScore: number,
   daysAgo: number,
-  matchingSkills: string[]
+  matchingRequiredSkills: string[],
+  matchingOptionalSkills: string[]
 ): string => {
-  const skillCount = matchingSkills.length;
-  const skillPart = skillCount > 0 ?
-    `${skillCount} skill${skillCount > 1 ? 's' : ''} matched (${baseRating} pts)` :
-    'No matching skills (0 pts)';
+  const requiredCount = matchingRequiredSkills.length;
+  const optionalCount = matchingOptionalSkills.length;
 
+  const requiredPart = requiredCount > 0 ?
+    `${requiredCount} required skill${requiredCount > 1 ? 's' : ''} (${skillsRating} pts)` :
+    'No required skills (0 pts)';
+
+  const optionalPart = optionalCount > 0 ?
+    ` + ${optionalCount} optional skill${optionalCount > 1 ? 's' : ''} (${optionalSkillsRating.toFixed(1)} pts)` :
+    '';
+
+  const workModelPart = workModelBonus > 0 ?
+    ` + work model (${workModelBonus} pts)` :
+    '';
+
+  const experiencePart = experiencePenalty !== 0 ?
+    ` + exp penalty (${experiencePenalty} pts)` :
+    '';
+
+  const baseTotal = skillsRating + optionalSkillsRating + workModelBonus + experiencePenalty;
   const daysAgoPart = daysAgo === -1 ? 'unknown date' : `${daysAgo}d ago`;
-  return `${skillPart} × ${timeDecay} (${daysAgoPart}) = ${finalScore.toFixed(1)}`;
+  return `${requiredPart}${optionalPart}${workModelPart}${experiencePart} = ${baseTotal.toFixed(1)} × ${timeDecay} (${daysAgoPart}) = ${finalScore.toFixed(1)}`;
 };
 
 export const findRatedJobsForKarel = async () => {
   console.log("🔍 Querying jobs from all sources (LinkedIn, JobIndex, etc.)...");
-  const jobs = await getRatedJobIdsImproved(karelSkillMap); // Use improved version
+  console.log("📝 Note: Internships are automatically filtered out");
+  const jobs = await getRatedJobIds(karelSkillMap); // Use improved version
 
   if (jobs.length === 0) {
     console.log("❌ No jobs found matching your skills. Make sure you have:");
@@ -121,65 +221,172 @@ export const findRatedJobsForKarel = async () => {
     console.log("  2. Run AI analysis on the jobs");
     console.log("  3. Have skills that match the available jobs");
     return;
-  } console.log(`📊 Found ${jobs.length} matching jobs. Processing...`);
+  }
 
+  console.log(`📊 Found ${jobs.length} matching jobs. Processing...`);
 
-  // Create enhanced info rows for display with cleaner, more relevant data
-  const importantInfoRows = await Promise.all(jobs.map(async (j) => {
-    // Get optional skills separately (non-required skills)
-    const optionalSkills = await db
-      .select({ name: skillTable.name })
-      .from(skillJobMappingTable)
-      .leftJoin(skillTable, eq(skillTable.id, skillJobMappingTable.skillId))
-      .where(
-        and(
-          eq(skillJobMappingTable.jobId, j.id),
-          eq(skillJobMappingTable.isRequired, false)
-        )
-    );
-    const timeDecay = calculateTimeDecay(j.jobPosted);
-    const adjustedScore = j.rating * timeDecay;
+  // Define type for processed job info (cleaned up columns)
+  type JobInfoRow = {
+    title: string;
+    location: string;
+    source: string | null;
+    skills: string; // Combined required and optional skills
+    yearsExp: string | number;
+    position: string;
+    workModel: string;
+    summary: string;
+    score: number;
+    scoringFormula: string;
+    posted: string | Date;
+    scraped: string;
+    // Keep URL data for links
+    originalUrl?: string | null;
+    externalId?: string | null;
+  };
 
-    let daysAgo: number;
-    if (!j.jobPosted) {
-      daysAgo = -1; // Use -1 to indicate unknown
-    } else {
-      const postedDate = new Date(j.jobPosted);
-      // Check if this is the Unix epoch (1970-01-01) which indicates missing data
-      if (postedDate.getFullYear() === 1970 && postedDate.getMonth() === 0 && postedDate.getDate() === 1) {
+  // Process jobs in batches to avoid overwhelming the database connection pool
+  const batchSize = 20; // Process 20 jobs at a time to balance speed vs connection limits
+  const importantInfoRows: JobInfoRow[] = [];
+
+  for (let i = 0; i < jobs.length; i += batchSize) {
+    const batch = jobs.slice(i, i + batchSize);
+
+    const batchResults = await Promise.all(batch.map(async (j) => {
+      // Get optional skills separately (non-required skills)
+      const optionalSkills = await db
+        .select({ name: skillTable.name })
+        .from(skillJobMappingTable)
+        .leftJoin(skillTable, eq(skillTable.id, skillJobMappingTable.skillId))
+        .where(
+          and(
+            eq(skillJobMappingTable.jobId, j.id),
+            eq(skillJobMappingTable.isRequired, false)
+          )
+        );
+
+      // Calculate work model bonus
+      const workModelBonus = getWorkModelBonus(j.workModel);
+
+      // Calculate optional skills bonus (50% of the normal skill rating since they're not required)
+      let optionalSkillsRating = 0;
+      const matchingOptionalSkills = [];
+      for (const optionalSkill of optionalSkills) {
+        if (optionalSkill.name) {
+          const skillRating = getSkillRating(optionalSkill.name, karelSkillMap);
+          if (skillRating !== 0) {
+            optionalSkillsRating += skillRating * 0.5; // 50% bonus for optional skills
+            matchingOptionalSkills.push(optionalSkill.name);
+          }
+        }
+      }
+
+      // Calculate years of experience penalty
+      const experiencePenalty = getYearsExperiencePenalty(j.yearsOfExperienceExpected);
+
+      // Calculate total base rating (required skills + optional skills + work model bonus + experience penalty)
+      const totalBaseRating = j.rating + optionalSkillsRating + workModelBonus + experiencePenalty;
+
+      // Calculate time decay and adjusted score
+      const timeDecay = calculateTimeDecay(j.jobPosted);
+      const adjustedScore = totalBaseRating * timeDecay;
+
+      let daysAgo: number;
+      if (!j.jobPosted) {
         daysAgo = -1; // Use -1 to indicate unknown
       } else {
-        daysAgo = Math.floor((new Date().getTime() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
+        const postedDate = new Date(j.jobPosted);
+        // Check if this is the Unix epoch (1970-01-01) which indicates missing data
+        if (postedDate.getFullYear() === 1970 && postedDate.getMonth() === 0 && postedDate.getDate() === 1) {
+          daysAgo = -1; // Use -1 to indicate unknown
+        } else {
+          daysAgo = Math.floor((new Date().getTime() - postedDate.getTime()) / (1000 * 60 * 60 * 24));
+        }
       }
-    }
 
-    return {
-      title: j.title,
-      company: j.company,
-      location: j.location?.split('·')[0]?.trim() || j.location, // Clean location
-      source: j.sourceName, // Show which source (LinkedIn, JobIndex, etc.)
-      requiredSkills: formatSkillsWithRatings(j.requiredSkills, karelSkillMap), // Show skills with ratings, sorted by rating
-      optionalSkills: formatSkillsWithRatings(optionalSkills.map(s => s.name).filter((name): name is string => name !== null).slice(0, 5), karelSkillMap) || 'None', // Optional skills with ratings
-      yearsExp: j.yearsOfExperienceExpected || 'Not specified',
-      seniority: j.seniorityLevel || 'Not specified',
-      position: j.developmentSide || 'Not specified',
-      workModel: j.workModel || 'Not specified',
-      summary: j.jobSummary || 'No summary available',
-      posted: j.jobPosted || 'Unknown',
-      scraped: j.dateScraped ? j.dateScraped.toLocaleDateString() : 'Unknown', // Add scraped date
-      numberOfApplicants: j.numberOfApplicants,
-      baseRating: j.rating,
-      adjustedScore: Math.round(adjustedScore * 10) / 10, // Round to 1 decimal      scoringFormula: scoringFormula,
-      externalId: j.externalId,
-      originalUrl: j.originalUrl,
-    };
-  }));
+      // Get all skills for formula (include all skills, even unknown ones with -5 penalty)
+      const allRequiredSkills = j.requiredSkills; // Include all required skills in display
+      const matchingRequiredSkillsWithRatings = allRequiredSkills.map(skill => `${skill}(${getSkillRating(skill, karelSkillMap)})`);
+      const matchingOptionalSkillsWithRatings = matchingOptionalSkills.map(skill => `${skill}(${Math.round(getSkillRating(skill, karelSkillMap) * 0.5)})`);
 
-  // Sort by adjusted score (descending)
-  importantInfoRows.sort((a, b) => b.adjustedScore - a.adjustedScore);
+      const scoringFormula = generateScoringFormulaString(
+        j.rating,
+        workModelBonus,
+        optionalSkillsRating,
+        experiencePenalty,
+        timeDecay,
+        adjustedScore,
+        daysAgo,
+        matchingRequiredSkillsWithRatings,
+        matchingOptionalSkillsWithRatings
+      );
+
+      // Format skills for display - combine required and optional with clear indicators
+      const requiredSkillsFormatted = formatSkillsWithRatings(j.requiredSkills, karelSkillMap);
+      const optionalSkillsFormatted = matchingOptionalSkills.length > 0 ?
+        formatSkillsWithRatings(matchingOptionalSkills, karelSkillMap) :
+        '';
+
+      // Combine skills with indicators
+      let combinedSkills = '';
+      if (requiredSkillsFormatted !== 'Not specified') {
+        combinedSkills += `Required: ${requiredSkillsFormatted}`;
+      }
+      if (optionalSkillsFormatted) {
+        if (combinedSkills) combinedSkills += ' | ';
+        combinedSkills += `Optional: ${optionalSkillsFormatted}`;
+      }
+      if (!combinedSkills) {
+        combinedSkills = 'No matching skills';
+      }
+
+      return {
+        title: j.title,
+        location: j.location?.split('·')[0]?.trim() || j.location, // Clean location
+        source: j.sourceName, // Show which source (LinkedIn, JobIndex, etc.)
+        skills: combinedSkills, // Combined skills with clear indicators
+        yearsExp: j.yearsOfExperienceExpected || 'Not specified',
+        position: j.developmentSide || 'Not specified',
+        workModel: j.workModel || 'Not specified',
+        summary: j.jobSummary || 'No summary available',
+        score: Math.round(adjustedScore * 10) / 10, // Round to 1 decimal
+        scoringFormula: scoringFormula,
+        posted: j.jobPosted || 'Unknown',
+        scraped: j.dateScraped ? j.dateScraped.toLocaleDateString() : 'Unknown', // Add scraped date
+        // Keep URL data for working links (but don't display as columns)
+        originalUrl: j.originalUrl,
+        externalId: j.externalId,
+      };
+    }));
+
+    importantInfoRows.push(...batchResults);
+  }
+
+  // Sort by adjusted score (descending) - this will be the default sort in the HTML report
+  importantInfoRows.sort((a, b) => b.score - a.score);
 
   console.log(`✅ Processed ${importantInfoRows.length} jobs. Opening in browser...`);
-  showImportantInfoRowsInBrowser(importantInfoRows);
+
+  // Calculate Karel's current experience for the profile box
+  const now = new Date();
+  const yearsOfExperience = (now.getTime() - dateKarelStartedProgramming.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+  const currentExperience = Math.floor(yearsOfExperience);
+
+  // Get all skills organized by rating for profile table
+  const allSkills = Object.entries(karelSkillMap)
+    .sort(([, a], [, b]) => b - a) // Sort by rating descending
+    .map(([skill, rating]) => ({ skill, rating }));
+
+  const karelProfile = {
+    experience: currentExperience,
+    startDate: dateKarelStartedProgramming.toLocaleDateString(),
+    allSkills: allSkills,
+    workModelPreferences: 'Hybrid (+30), On-site (+25), Remote (0)',
+    experienceRange: `${currentExperience} years (penalties for ${currentExperience + 1}+ years required)`,
+    unknownSkillPenalty: '-5 points per unknown skill',
+    optionalSkillBonus: 'Optional skills get 50% of normal rating'
+  };
+
+  showImportantInfoRowsInBrowser(importantInfoRows, karelProfile);
 
   // Keep the server running by waiting for user input
   console.log(`\n🌐 HTML report is now running. Press Enter to continue or Ctrl+C to exit...`);
@@ -190,112 +397,7 @@ export const findRatedJobsForKarel = async () => {
   });
 }
 
-/**
- * Queries job posts from ALL sources and orders them based on your skills proficiency and posting date.
- * @param mySkills - Object with skill names as keys and proficiency levels as values
- * @returns Promise resolving to an array of ordered job results
- */
 export async function getRatedJobIds(mySkills: Record<string, number>) {
-  const skillNames = Object.keys(mySkills);
-
-  if (skillNames.length === 0) {
-    return [];
-  }
-  // Build the CASE statement for rating calculation with partial matching
-  const ratingCases = skillNames.flatMap(skillName => {
-    const skillLower = skillName.toLowerCase();
-    const cases = [];
-
-    // Exact match (case insensitive)
-    cases.push(`WHEN LOWER(skill.name) = '${skillLower.replace(/'/g, "''")}' THEN ${mySkills[skillName]}`);
-
-    // Partial matches - skill contains our map skill
-    cases.push(`WHEN LOWER(skill.name) LIKE '%${skillLower.replace(/'/g, "''")}%' THEN ${mySkills[skillName]}`);
-
-    // Special variations
-    if (skillLower === 'react') {
-      cases.push(`WHEN LOWER(skill.name) LIKE '%reactjs%' OR LOWER(skill.name) LIKE '%react.js%' THEN ${mySkills[skillName]}`);
-    }
-    if (skillLower === 'angular') {
-      cases.push(`WHEN LOWER(skill.name) LIKE '%angularjs%' THEN ${mySkills[skillName]}`);
-    }
-    if (skillLower === 'javascript') {
-      cases.push(`WHEN LOWER(skill.name) = 'js' OR LOWER(skill.name) LIKE '%js%' THEN ${mySkills[skillName]}`);
-    }
-    if (skillLower === 'typescript') {
-      cases.push(`WHEN LOWER(skill.name) = 'ts' OR LOWER(skill.name) LIKE '%ts%' THEN ${mySkills[skillName]}`);
-    }
-
-    return cases;
-  }).join(' ');
-  const query = db
-    .select({
-      id: jobPostsTable.id,
-      externalId: jobPostsTable.externalId,
-      originalUrl: jobPostsTable.originalUrl,
-      rating: sql<number>`
-        CAST(COALESCE(
-          SUM(CASE ${sql.raw(ratingCases)} ELSE 0 END), 0
-        ) AS INTEGER)
-      `.as("rating"),
-      title: jobPostsTable.title,
-      company: jobPostsTable.company,
-      location: jobPostsTable.location,
-      skills: jobPostsTable.skills,
-      sourceName: jobSourcesTable.name,
-      dateScraped: jobPostsTable.dateScraped, // Add scraped date
-      yearsOfExperienceExpected: jobAiAnalysisTable.yearsOfExperienceExpected,
-      seniorityLevel: jobAiAnalysisTable.seniorityLevel,
-      developmentSide: jobAiAnalysisTable.developmentSide,
-      workModel: jobAiAnalysisTable.workModel,
-      jobSummary: jobAiAnalysisTable.jobSummary,
-      jobPosted: jobAiAnalysisTable.jobPosted,
-      numberOfApplicants: jobAiAnalysisTable.numberOfApplicants,
-      requiredSkills: sql<string[]>`COALESCE(array_agg(DISTINCT skill.name ORDER BY skill.name) FILTER (WHERE skill.name IS NOT NULL), ARRAY[]::text[])`.as("required_skills"),
-    })
-    .from(jobPostsTable)
-    .leftJoin(jobSourcesTable, eq(jobSourcesTable.id, jobPostsTable.sourceId))
-    .leftJoin(jobAiAnalysisTable, eq(jobAiAnalysisTable.jobId, jobPostsTable.id))
-    .leftJoin(
-      skillJobMappingTable,
-      and(
-        eq(skillJobMappingTable.jobId, jobPostsTable.id),
-        eq(skillJobMappingTable.isRequired, true)
-      )
-    )
-    .leftJoin(skillTable, eq(skillTable.id, skillJobMappingTable.skillId))
-    .where(sql`${jobPostsTable.id} IN (
-      SELECT DISTINCT ${skillJobMappingTable.jobId}
-      FROM ${skillJobMappingTable}
-      JOIN ${skillTable} ON ${skillTable.id} = ${skillJobMappingTable.skillId}
-      WHERE ${skillTable.name} = ANY(${sql.raw(`ARRAY[${skillNames.map(name => `'${name.replace(/'/g, "''")}'`).join(',')}]`)})
-      AND ${skillJobMappingTable.isRequired} = true    )`).groupBy(
-      jobPostsTable.id,
-      jobPostsTable.externalId,
-      jobPostsTable.originalUrl,
-      jobPostsTable.title,
-      jobPostsTable.company,
-      jobPostsTable.location,
-      jobPostsTable.skills,
-        jobPostsTable.dateScraped, // Add scraped date to group by
-      jobSourcesTable.name,
-      jobAiAnalysisTable.jobPosted,
-      jobAiAnalysisTable.yearsOfExperienceExpected,
-      jobAiAnalysisTable.seniorityLevel,
-      jobAiAnalysisTable.developmentSide,
-      jobAiAnalysisTable.workModel,
-      jobAiAnalysisTable.jobSummary,
-      jobAiAnalysisTable.numberOfApplicants)
-    .orderBy(sql`rating DESC`, desc(jobAiAnalysisTable.jobPosted))
-
-  const results = await query;
-  return results;
-}
-
-/**
- * Improved version of getRatedJobIds with better skill matching
- */
-export async function getRatedJobIdsImproved(mySkills: Record<string, number>) {
   const skillNames = Object.keys(mySkills);
 
   if (skillNames.length === 0) {
@@ -321,22 +423,22 @@ export async function getRatedJobIdsImproved(mySkills: Record<string, number>) {
       jobSummary: jobAiAnalysisTable.jobSummary,
       jobPosted: jobAiAnalysisTable.jobPosted,
       numberOfApplicants: jobAiAnalysisTable.numberOfApplicants,
-      requiredSkills: sql<string[]>`COALESCE(array_agg(DISTINCT skill.name ORDER BY skill.name) FILTER (WHERE skill.name IS NOT NULL), ARRAY[]::text[])`.as("required_skills"),
+      requiredSkills: sql<string[]>`COALESCE(array_agg(DISTINCT CASE WHEN ${skillJobMappingTable.isRequired} = true THEN ${skillTable.name} END) FILTER (WHERE ${skillTable.name} IS NOT NULL AND ${skillJobMappingTable.isRequired} = true), ARRAY[]::text[])`.as("required_skills"),
+      optionalSkills: sql<string[]>`COALESCE(array_agg(DISTINCT CASE WHEN ${skillJobMappingTable.isRequired} = false THEN ${skillTable.name} END) FILTER (WHERE ${skillTable.name} IS NOT NULL AND ${skillJobMappingTable.isRequired} = false), ARRAY[]::text[])`.as("optional_skills"),
     })
     .from(jobPostsTable)
     .leftJoin(jobSourcesTable, eq(jobSourcesTable.id, jobPostsTable.sourceId))
     .leftJoin(jobAiAnalysisTable, eq(jobAiAnalysisTable.jobId, jobPostsTable.id))
-    .leftJoin(
-      skillJobMappingTable,
-      and(
-        eq(skillJobMappingTable.jobId, jobPostsTable.id),
-        eq(skillJobMappingTable.isRequired, true)
-      ))
+    .leftJoin(skillJobMappingTable, eq(skillJobMappingTable.jobId, jobPostsTable.id))
     .leftJoin(skillTable, eq(skillTable.id, skillJobMappingTable.skillId))
     .where(
       and(
         sql`${jobAiAnalysisTable.jobId} IS NOT NULL`, // Only jobs with AI analysis
-        sql`${jobAiAnalysisTable.jobPosted} > NOW() - INTERVAL '2 weeks'` // Only jobs posted within 2 weeks
+        // Filter out internships - exclude jobs that are marked as internships
+        or(
+          eq(jobAiAnalysisTable.isInternship, false),
+          sql`${jobAiAnalysisTable.isInternship} IS NULL`
+        )
       )
   )
     .groupBy(
@@ -357,32 +459,53 @@ export async function getRatedJobIdsImproved(mySkills: Record<string, number>) {
       jobAiAnalysisTable.jobSummary,
       jobAiAnalysisTable.numberOfApplicants
   );
+
   const allJobs = await query;
 
-  // Filter and score jobs based on skill matching using our improved matching logic
   const scoredJobs = allJobs
     .map(job => {
       // Calculate rating using our improved skill matching
-      let rating = 0;
+      let skillsRating = 0;
       const matchingSkills = [];
+      const negativeSkills = [];
+      let hasRelevantSkills = false; // Track if job has skills that are actually relevant to you
+      let hasExplicitlyNegativeSkills = false; // Track if job has skills you explicitly hate
 
       for (const skill of job.requiredSkills) {
         const skillRating = getSkillRating(skill, mySkills);
-        if (skillRating !== 0) { // Include both positive and negative ratings
-          rating += skillRating;
+        if (skillRating > 0) {
+          skillsRating += skillRating;
           matchingSkills.push(skill);
+          hasRelevantSkills = true; // Positive skill match
+        } else if (skillRating < 0 && skillRating !== -5) {
+          // Explicitly negative skills (from your skill map) - these are deal breakers
+          skillsRating += skillRating; // Add negative points
+          negativeSkills.push(skill);
+          hasExplicitlyNegativeSkills = true; // Mark as having deal-breaker skills
+        } else if (skillRating === -5) {
+          // Unknown skills still get penalty but don't make job "relevant"
+          skillsRating += skillRating;
+          negativeSkills.push(skill);
         }
       }
 
+      // Add work model bonus
+      const workModelBonus = getWorkModelBonus(job.workModel);
+      const totalRating = skillsRating + workModelBonus;
+
       return {
         ...job,
-        rating,
-        matchingSkills
+        rating: totalRating,
+        skillsRating,
+        workModelBonus,
+        matchingSkills: [...matchingSkills, ...negativeSkills], // Include all skills for display
+        hasRelevantSkills, // Track if this job is actually relevant
+        hasExplicitlyNegativeSkills // Track if this job has deal-breaker skills
       };
     })
-    .filter(job => job.matchingSkills.length > 0) // Only include jobs that have skills we know about (positive or negative)
+    .filter(job => job.hasRelevantSkills) // Only include jobs with at least one positive skill (negative skills are allowed)
     .sort((a, b) => {
-      // Sort by rating first, then by posting date
+      // Sort by total rating first, then by posting date
       if (b.rating !== a.rating) {
         return b.rating - a.rating;
       }

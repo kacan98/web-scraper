@@ -68,6 +68,7 @@ export const jobsMenu = async () => {
             const ratedTimeStarted = new Date();
 
             try {
+                await analyzeJobsWithAI(true);
                 console.log("🔍 Finding rated jobs based on your skills...");
                 await findRatedJobsForKarel();
             } catch (error) {
@@ -82,6 +83,7 @@ export const jobsMenu = async () => {
             const matchingTimeStarted = new Date();
 
             try {
+                await analyzeJobsWithAI(true);
                 await findMatchingJobsForKarel();
             } catch (error) {
                 console.error('Error finding matching jobs:', error);

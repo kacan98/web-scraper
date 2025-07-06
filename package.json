@@ -7,7 +7,7 @@
     "help": "tsx index.ts --help",
     "update-db-with-drizzle-schema": "npx drizzle-kit push --config ./drizzle.config.ts",
     "test": "jest",
-    "scrape-jobs": "tsx index.ts -p Jobs -a Scrape_jobs -l Copenhagen -s TypeScript -m 86400 --login",
+    "scrape-jobs": "tsx index.ts -p Jobs -a Scrape_jobs -l Copenhagen -s TypeScript --login",
     "instagram-scrape-users": "tsx index.ts -p Instagram -a SCRAPE_USERS -i emmabjorndahl",
     "instagram-follow-users": "tsx index.ts -p Instagram -a FOLLOW_USERS",
     "docker-up": "docker-compose up -d",
