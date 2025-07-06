@@ -38,6 +38,7 @@ export const karelSkillMap: Record<string, number> = {
   "Danish": 10,
 
   // Negative skills (penalties)
+  "React Native": -5,
   "Swift": -10,
   'PHP': -10,
   "Python": -10,
